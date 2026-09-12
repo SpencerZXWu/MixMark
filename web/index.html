@@ -12,16 +12,16 @@
      顺序不能变：令牌 → 主题 → 基础 → 布局 → 组件 → 编辑器 → 预览
      后面的文件会用到前面的变量与重置规则。
      ========================================================================== -->
-<link rel="stylesheet" href="vendor/katex/katex.min.css?v=77">
-<link rel="stylesheet" href="css/tokens.css?v=77">
-<link rel="stylesheet" href="css/theme.css?v=77">
-<link rel="stylesheet" href="css/base.css?v=77">
-<link rel="stylesheet" href="css/layout.css?v=77">
-<link rel="stylesheet" href="css/components.css?v=77">
-<link rel="stylesheet" href="css/editor.css?v=77">
-<link rel="stylesheet" href="css/preview.css?v=77">
-<link rel="stylesheet" href="css/home.css?v=77">
-<link rel="stylesheet" href="css/ai.css?v=77">
+<link rel="stylesheet" href="vendor/katex/katex.min.css?v=78">
+<link rel="stylesheet" href="css/tokens.css?v=78">
+<link rel="stylesheet" href="css/theme.css?v=78">
+<link rel="stylesheet" href="css/base.css?v=78">
+<link rel="stylesheet" href="css/layout.css?v=78">
+<link rel="stylesheet" href="css/components.css?v=78">
+<link rel="stylesheet" href="css/editor.css?v=78">
+<link rel="stylesheet" href="css/preview.css?v=78">
+<link rel="stylesheet" href="css/home.css?v=78">
+<link rel="stylesheet" href="css/ai.css?v=78">
 </head>
 <body>
 
@@ -260,75 +260,75 @@
      依赖：全部是本地 IIFE 经典脚本。
      不使用 CDN（要离线可用），不使用 type="module"（file:// 下会被 CORS 拒绝）。
      ========================================================================== -->
-<script src="vendor/marked.js?v=77"></script>
-<script src="vendor/purify.js?v=77"></script>
-<script src="vendor/katex/katex.min.js?v=77"></script>
-<script src="vendor/katex/mhchem.min.js?v=77"></script>
-<script src="vendor/hljs.bundle.js?v=77"></script>
-<script src="vendor/codemirror.bundle.js?v=77"></script>
+<script src="vendor/marked.js?v=78"></script>
+<script src="vendor/purify.js?v=78"></script>
+<script src="vendor/katex/katex.min.js?v=78"></script>
+<script src="vendor/katex/mhchem.min.js?v=78"></script>
+<script src="vendor/hljs.bundle.js?v=78"></script>
+<script src="vendor/codemirror.bundle.js?v=78"></script>
 
 <!-- ==========================================================================
      业务代码：加载顺序即依赖顺序，不可随意调换。
      ========================================================================== -->
 <!-- 1. 基础设施 -->
-<script src="js/i18n.js?v=77"></script>
-<script src="js/core/store.js?v=77"></script>
-<script src="js/core/settings.js?v=77"></script>
-<script src="js/core/commands.js?v=77"></script>
+<script src="js/i18n.js?v=78"></script>
+<script src="js/core/store.js?v=78"></script>
+<script src="js/core/settings.js?v=78"></script>
+<script src="js/core/commands.js?v=78"></script>
 
 <!-- 2. 存储层（顺序要紧：先有 library 工厂，各后端才能建出 provider；
      最后才是选路模块，它要读前面注册好的那几个） -->
-<script src="js/provider/library.js?v=77"></script>
-<script src="js/provider/localstore.js?v=77"></script>
-<script src="js/provider/idb.js?v=77"></script>
-<script src="js/provider/fsa.js?v=77"></script>
-<script src="js/provider/diskfile.js?v=77"></script>
-<script src="js/provider/index.js?v=77"></script>
+<script src="js/provider/library.js?v=78"></script>
+<script src="js/provider/localstore.js?v=78"></script>
+<script src="js/provider/idb.js?v=78"></script>
+<script src="js/provider/fsa.js?v=78"></script>
+<script src="js/provider/diskfile.js?v=78"></script>
+<script src="js/provider/index.js?v=78"></script>
 
 <!-- 3. 文档 -->
-<script src="js/core/docs.js?v=77"></script>
-<script src="js/core/recovery.js?v=77"></script>
-<script src="js/core/search.js?v=77"></script>
+<script src="js/core/docs.js?v=78"></script>
+<script src="js/core/recovery.js?v=78"></script>
+<script src="js/core/search.js?v=78"></script>
 
 <!-- 4. 编辑器层 -->
-<script src="js/editor/md-syntax.js?v=77"></script>
-<script src="js/editor/math-symbols.js?v=77"></script>
-<script src="js/editor/text-symbols.js?v=77"></script>
-<script src="js/editor/cm-setup.js?v=77"></script>
-<script src="js/editor/math-complete.js?v=77"></script>
-<script src="js/editor/actions.js?v=77"></script>
+<script src="js/editor/md-syntax.js?v=78"></script>
+<script src="js/editor/math-symbols.js?v=78"></script>
+<script src="js/editor/text-symbols.js?v=78"></script>
+<script src="js/editor/cm-setup.js?v=78"></script>
+<script src="js/editor/math-complete.js?v=78"></script>
+<script src="js/editor/actions.js?v=78"></script>
 
 <!-- 5. 预览层 -->
-<script src="js/preview/pipeline.js?v=77"></script>
-<script src="js/preview/line-map.js?v=77"></script>
-<script src="js/preview/scroll-sync.js?v=77"></script>
+<script src="js/preview/pipeline.js?v=78"></script>
+<script src="js/preview/line-map.js?v=78"></script>
+<script src="js/preview/scroll-sync.js?v=78"></script>
 
 <!-- 6. UI 层 -->
-<script src="js/ui/toast.js?v=77"></script>
-<script src="js/ui/dialogs.js?v=77"></script>
-<script src="js/ui/palette.js?v=77"></script>
-<script src="js/ui/menubar.js?v=77"></script>
-<script src="js/ui/find-bar.js?v=77"></script>
-<script src="js/ui/tabs.js?v=77"></script>
-<script src="js/ui/drop-assets.js?v=77"></script>
-<script src="js/ui/symbol-panel.js?v=77"></script>
-<script src="js/ui/outline.js?v=77"></script>
-<script src="js/ui/sidebar.js?v=77"></script>
-<script src="js/ui/statusbar.js?v=77"></script>
-<script src="js/ui/settings-page.js?v=77"></script>
-<script src="js/ui/app-commands.js?v=77"></script>
-<script src="js/ui/home.js?v=77"></script>
-<script src="js/ui/ai-panel.js?v=77"></script>
-<script src="js/ui/shell.js?v=77"></script>
+<script src="js/ui/toast.js?v=78"></script>
+<script src="js/ui/dialogs.js?v=78"></script>
+<script src="js/ui/palette.js?v=78"></script>
+<script src="js/ui/menubar.js?v=78"></script>
+<script src="js/ui/find-bar.js?v=78"></script>
+<script src="js/ui/tabs.js?v=78"></script>
+<script src="js/ui/drop-assets.js?v=78"></script>
+<script src="js/ui/symbol-panel.js?v=78"></script>
+<script src="js/ui/outline.js?v=78"></script>
+<script src="js/ui/sidebar.js?v=78"></script>
+<script src="js/ui/statusbar.js?v=78"></script>
+<script src="js/ui/settings-page.js?v=78"></script>
+<script src="js/ui/app-commands.js?v=78"></script>
+<script src="js/ui/home.js?v=78"></script>
+<script src="js/ui/ai-panel.js?v=78"></script>
+<script src="js/ui/shell.js?v=78"></script>
 
 <!-- 7. 导出 -->
-<script src="js/export/md.js?v=77"></script>
-<script src="js/export/migrate.js?v=77"></script>
-<script src="js/export/html.js?v=77"></script>
-<script src="js/export/pdf.js?v=77"></script>
+<script src="js/export/md.js?v=78"></script>
+<script src="js/export/migrate.js?v=78"></script>
+<script src="js/export/html.js?v=78"></script>
+<script src="js/export/pdf.js?v=78"></script>
 
 <!-- 8. 启动（必须最后） -->
-<script src="js/main.js?v=77"></script>
+<script src="js/main.js?v=78"></script>
 
 </body>
 </html>
