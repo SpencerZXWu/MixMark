@@ -1,0 +1,503 @@
+/**
+ * MixMark · AI 助手面板
+ * ===============================================================
+ * 挂在侧栏下半部分：上面是文档/大纲/搜索，下面是它。
+ * 折叠时只留一条标题栏，把空间还给文档列表。
+ */
+
+.ai {
+  /* 高度：拖过就是写死的像素（--mm-ai-h），没拖过就是侧栏的 45%。
+     var() 的第二个参数兜的就是「没拖过」那一种情况 —— 不要写成 0，
+     那会被当成「高度为 0」而不是「没设过」 */
+  flex: 0 0 var(--mm-ai-h, 45%);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  border-top: 1px solid var(--mm-border);
+  background: var(--mm-bg-sub);
+}
+
+/* 折叠只把高度收掉，**不能**用 display:none —— 
+   那样标题栏也没了，就再也展开不回来 */
+.ai.is-collapsed {
+  flex: 0 0 auto;
+}
+
+/* ---- 高度拖动条 ---- */
+.ai__resizer {
+  position: absolute;
+  top: -3px;
+  left: 0;
+  right: 0;
+  height: 7px;
+  cursor: ns-resize;
+  z-index: 2;
+}
+
+.ai__resizer:hover,
+.ai__resizer.is-active {
+  background: var(--mm-accent-weak);
+}
+
+.ai.is-collapsed .ai__resizer {
+  display: none;
+}
+
+/* 拖高度时别让内容跟着重排、也别选中文字 */
+body.is-resizing-ai {
+  cursor: ns-resize;
+  user-select: none;
+}
+
+/* 拖入引用时整块面板给个回执 */
+.ai.is-drop {
+  outline: 1px dashed var(--mm-accent);
+  outline-offset: -2px;
+  background: var(--mm-accent-weak);
+}
+
+.ai__bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 5px 6px 5px 12px;
+  font-size: var(--mm-fs-sm);
+  user-select: none;
+}
+
+.ai__title {
+  flex: 1;
+  font-weight: var(--mm-weight-medium);
+  color: var(--mm-text-1);
+}
+
+.ai__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ai.is-collapsed .ai__body {
+  display: none;
+}
+
+/* ---- 消息流 ---- */
+
+.ai__log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px 10px 10px;
+}
+
+.ai__log[hidden] {
+  display: none;
+}
+
+.ai-msg {
+  display: flex;
+}
+
+/* 一行小字，摊事实用：「本轮动作：读文档 · 改写提案」 */
+.ai-note {
+  flex: 0 0 auto;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--mm-text-3);
+}
+
+.ai-note--warn {
+  color: var(--mm-danger);
+}
+
+.ai-note[hidden] {
+  display: none;
+}
+
+/* 对话区是 flex 列，子项默认可以被压缩 —— 一条长卡片会被挤成一条缝，
+   看着像「什么都没渲染」。一律按内容高度占位，超出交给 .ai__log 滚动 */
+.ai-msg,
+.ai-change {
+  flex: 0 0 auto;
+}
+
+.ai-msg--user {
+  justify-content: flex-end;
+}
+
+.ai-msg__body {
+  max-width: 100%;
+  padding: 7px 10px;
+  border-radius: var(--mm-radius-md);
+  font-size: var(--mm-fs-sm);
+  line-height: 1.65;
+  /* 模型输出里的换行与缩进直接按原样显示：
+     这一栏太窄，再渲染一遍 Markdown 反而难读 */
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ai-msg--bot .ai-msg__body {
+  background: var(--mm-surface);
+  color: var(--mm-text-1);
+}
+
+.ai-msg--user .ai-msg__body {
+  background: var(--mm-accent-weak);
+  color: var(--mm-text-1);
+}
+
+/* ---- 状态 ---- */
+
+.ai__status {
+  flex: 0 0 auto;
+  padding: 0 12px 6px;
+  font-size: var(--mm-fs-sm);
+  color: var(--mm-text-3);
+}
+
+.ai__status[hidden] {
+  display: none;
+}
+
+/* ---- 输入 ---- */
+
+.ai__compose {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 0 8px 8px;
+}
+
+.ai__compose[hidden] {
+  display: none;
+}
+
+.ai__input {
+  flex: 1;
+  min-width: 0;
+  max-height: 120px;
+  padding: 7px 9px;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-sm);
+  background: var(--mm-surface);
+  color: var(--mm-text-1);
+  font-family: inherit;
+  font-size: var(--mm-fs-sm);
+  line-height: 1.5;
+  resize: none;
+}
+
+.ai__input:focus {
+  outline: none;
+  border-color: var(--mm-accent);
+}
+
+.ai__send {
+  flex: 0 0 auto;
+  padding: 7px 12px;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-sm);
+  background: var(--mm-surface);
+  color: var(--mm-accent);
+  font-family: inherit;
+  font-size: var(--mm-fs-sm);
+  font-weight: var(--mm-weight-medium);
+  cursor: pointer;
+}
+
+.ai__send:hover:not(:disabled) {
+  background: var(--mm-accent-weak);
+}
+
+.ai__send:disabled {
+  color: var(--mm-text-3);
+  cursor: default;
+}
+
+/* ---- 引用条 ---- */
+
+.ai-refs {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 0 8px 6px;
+}
+
+.ai-refs[hidden] {
+  display: none;
+}
+
+.ai-ref {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  max-width: 100%;
+  padding: 2px 3px 2px 7px;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-pill);
+  background: var(--mm-surface);
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--mm-text-2);
+}
+
+/* 三种来路各给一点颜色区分：选中的行 / 文档 / 文件夹 */
+.ai-ref--lines {
+  border-color: var(--mm-accent);
+  color: var(--mm-text-1);
+}
+
+.ai-ref__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 190px;
+}
+
+.ai-ref__drop {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--mm-text-3);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ai-ref__drop:hover {
+  background: var(--mm-danger-weak);
+  color: var(--mm-danger);
+}
+
+/* ---- 结构变更卡片（重命名 / 移动 / 新建文件夹） ----
+   不做「先提案后确认」：这些操作一眼能看懂、也能随手改回去，
+   再插一道确认只会让「帮我理一下文档」变成十次点击。
+   代价必须补上：卡片带一个「撤销」，且默认就摆在对话里 */
+
+.ai-change--struct {
+  border-color: var(--mm-border-strong);
+}
+
+.ai-struct__line {
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--mm-text-2);
+  word-break: break-word;
+}
+
+
+.ai-keyform {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 2px 10px 10px;
+}
+
+.ai-keyform[hidden] {
+  display: none;
+}
+
+.ai-keyform__label {
+  font-size: var(--mm-fs-sm);
+  color: var(--mm-text-2);
+}
+
+.ai-keyform__input {
+  padding: 6px 9px;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-sm);
+  background: var(--mm-surface);
+  color: var(--mm-text-1);
+  font-family: var(--mm-font-mono);
+  font-size: var(--mm-fs-sm);
+}
+
+.ai-keyform__input:focus {
+  outline: none;
+  border-color: var(--mm-accent);
+}
+
+.ai-keyform__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-keyform__hint {
+  flex: 1;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--mm-text-3);
+}
+
+.ai-keyform__save {
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-sm);
+  background: var(--mm-surface);
+  color: var(--mm-accent);
+  font-family: inherit;
+  font-size: var(--mm-fs-sm);
+  cursor: pointer;
+}
+
+.ai-keyform__save:hover {
+  background: var(--mm-accent-weak);
+}
+
+/* --------------------------------------------------------------------------
+   变更卡片
+
+   写类工具不会直接改文档，先在这里摆出「改了什么」：
+   只列变化行，不铺整篇 —— 要看上下文去编辑器里看。
+   -------------------------------------------------------------------------- */
+.ai-change {
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-md);
+  background: var(--mm-surface);
+  overflow: hidden;
+}
+
+.ai-change__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--mm-border);
+  font-size: var(--mm-fs-sm);
+}
+
+.ai-change__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: var(--mm-weight-medium);
+  color: var(--mm-text-1);
+}
+
+/* diff 收矮一些：卡片总高要能塞进对话区，「保留 / 撤销」才不用滚着找 */
+.ai-change__diff {
+  max-height: 118px;
+  overflow-y: auto;
+  padding: 4px 0;
+  font-family: var(--mm-font-mono);
+  font-size: 11.5px;
+  line-height: 1.65;
+}
+
+.ai-change__line {
+  padding: 0 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--mm-text-2);
+}
+
+/* 增行用「成功色」调淡、删行用「危险色」调淡，
+   两个语义色各主题都有，不用另开令牌 */
+.ai-change__line--add {
+  background: color-mix(in srgb, var(--mm-ok) 16%, transparent);
+  color: var(--mm-text-1);
+}
+
+.ai-change__line--del {
+  background: var(--mm-danger-weak);
+  color: var(--mm-text-2);
+}
+
+.ai-change__line--more,
+.ai-change__line--meta {
+  color: var(--mm-text-3);
+}
+
+.ai-change__stat {
+  flex: 0 0 auto;
+  font-family: var(--mm-font-mono);
+  font-size: 11.5px;
+  color: var(--mm-text-3);
+}
+
+.ai-change__btn {
+  padding: 4px 10px;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-sm);
+  background: var(--mm-surface);
+  color: var(--mm-text-2);
+  font-family: inherit;
+  font-size: var(--mm-fs-sm);
+  cursor: pointer;
+}
+
+.ai-change__btn:hover {
+  background: var(--mm-surface-2);
+}
+
+.ai-change__btn--keep {
+  border-color: var(--mm-accent);
+  color: var(--mm-accent);
+  font-weight: var(--mm-weight-medium);
+}
+
+.ai-change__btn--keep:hover {
+  background: var(--mm-accent-weak);
+}
+
+.ai-change__done {
+  font-size: var(--mm-fs-sm);
+  color: var(--mm-text-3);
+}
+
+/* 已处理的卡片整体压淡，一眼能看出它不再等你决定 */
+.ai-change--kept .ai-change__diff,
+.ai-change--reverted .ai-change__diff {
+  opacity: 0.55;
+}
+
+/* --------------------------------------------------------------------------
+   编辑器内的 AI 差异高亮
+
+   新增行标绿；被删掉的行在文档里已经不存在了，靠块状 widget 以红色幽灵行
+   摆回原处。「保留」之后这两样都会消失。
+   -------------------------------------------------------------------------- */
+/* 浓度取到 26%：18% 在浅色主题下几乎看不出来，
+   而这一版的全部意义就是「让改动看得见」 */
+.cm-line.ai-diff-add {
+  background: color-mix(in srgb, var(--mm-ok) 26%, transparent);
+}
+
+/* 块状 widget 本身不要内边距，交给里面的行 —— 否则删一行会出现两条色带 */
+.ai-diff-del {
+  background: var(--mm-danger-weak);
+  border-left: 2px solid var(--mm-danger);
+}
+
+.ai-diff-del__line {
+  padding: 0 8px;
+  font-family: var(--mm-font-mono);
+  font-size: var(--mm-fs-editor);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--mm-text-2);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--mm-danger) 65%, transparent);
+}

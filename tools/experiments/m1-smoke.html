@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MixMark · M1 冒烟测试</title>
+<link rel="stylesheet" href="../../web/vendor/katex/katex.min.css?v=1">
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f7f7f8;
+    --line: #e3e3e6;
+    --text: #1f2328;
+    --muted: #6b7280;
+    --ok: #1a7f37;
+    --warn: #9a6700;
+    --bad: #cf222e;
+    --accent: #2f5fd0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181d;
+      --surface: #1d2026;
+      --line: #2f333b;
+      --text: #e6e8ec;
+      --muted: #9198a4;
+      --ok: #3fb950;
+      --warn: #d29922;
+      --bad: #f85149;
+      --accent: #6b9bff;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 32px 24px 64px;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.6 -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; }
+
+  h1 { font-size: 20px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); margin: 0 0 24px; font-size: 13px; }
+
+  h2 {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin: 32px 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .verdict {
+    padding: 14px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    margin-bottom: 20px;
+  }
+  .verdict.ok   { color: var(--ok);   border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
+  .verdict.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, transparent); }
+  .verdict.bad  { color: var(--bad);  border-color: color-mix(in srgb, var(--bad) 40%, transparent); }
+
+  ul.report { list-style: none; margin: 0; padding: 0; }
+  .row { display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+  .row .icon { flex: 0 0 16px; font-weight: 700; }
+  .row .body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .row .detail { color: var(--muted); font-size: 12.5px; word-break: break-word; }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  #katex-target { text-align: center; padding: 8px 0 12px; }
+  #katex-verdict, #ime-counter { font-size: 12.5px; color: var(--muted); }
+
+  #editor-host {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 10px;
+    background: var(--bg);
+  }
+
+  .hint { font-size: 12.5px; color: var(--muted); margin-top: 10px; }
+  .hint b { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>MixMark · M1 冒烟测试</h1>
+  <p class="sub">验证「双击 index.html 即可运行」这条产品红线在技术上是否成立。此页面长期保留，作为回归用例。</p>
+
+  <div id="verdict" class="verdict">检测中…</div>
+  <ul id="report" class="report"></ul>
+
+  <h2>实验 1 · 依赖加载</h2>
+  <p class="hint">验证 <code>file://</code> 下 IIFE 经典脚本能否正常加载（若失败，零构建架构不成立）。</p>
+
+  <h2>实验 2 · KaTeX 字体</h2>
+  <div class="panel">
+    <div id="katex-target"></div>
+    <div id="katex-verdict">检测中…</div>
+  </div>
+  <p class="hint">验证 <code>@font-face</code> 在 <code>file://</code> 下是否被 CORS 拦截。若公式看起来字体错位、根号或分号变形，即为字体缺失。</p>
+
+  <h2>实验 3 · 中文输入法</h2>
+  <div class="panel">
+    <div id="editor-host"></div>
+    <div id="ime-counter">尚未输入</div>
+    <p class="hint">
+      请用<b>微软拼音</b>在此输入一段中文，重点观察：候选框是否跟随光标、上屏有无丢字或重复、快速连打长句是否掉字符。
+      这一项需人工判断，也是 M1 阶段最需要优先确认的风险。
+    </p>
+  </div>
+
+</div>
+
+<!-- 依赖：全部为本地 IIFE 经典脚本，不使用 CDN，不使用 ES Module -->
+<script src="../../web/vendor/marked.js?v=1"></script>
+<script src="../../web/vendor/purify.js?v=1"></script>
+<script src="../../web/vendor/katex/katex.min.js?v=1"></script>
+<script src="../../web/vendor/hljs.bundle.js?v=1"></script>
+<script src="../../web/vendor/codemirror.bundle.js?v=1"></script>
+
+<script src="m1-smoke.js?v=1"></script>
+</body>
+</html>

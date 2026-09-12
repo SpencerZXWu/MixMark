@@ -1,0 +1,159 @@
+/* ==========================================================================
+   MixMark · 设计令牌
+   --------------------------------------------------------------------------
+   所有视觉数值的唯一来源。其它 CSS 文件只允许引用变量，禁止写字面量颜色
+   或尺寸（个别一次性数值除外，如 1px 边框）。
+
+   主题切换机制：theme.css 通过 [data-theme] 覆盖本文件的部分变量。
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
+
+  /* ------------------------------------------------------------------
+     色彩 · 中性阶
+     正文对比度目标 ≥ 7:1（WCAG AAA）
+     ------------------------------------------------------------------ */
+  --mm-bg: #ffffff;
+  --mm-bg-sub: #f7f8fa;
+  --mm-bg-sunken: #eef0f4;
+  --mm-surface: #ffffff;
+  --mm-surface-2: #f4f5f7;
+  --mm-overlay: rgba(23, 26, 31, 0.32);
+
+  --mm-border: #e5e7eb;
+  --mm-border-strong: #ced2d9;
+
+  --mm-text-1: #1a1d21; /* 正文主色 */
+  --mm-text-2: #565d69; /* 次要信息 */
+  --mm-text-3: #878e9a; /* 占位、禁用 */
+  --mm-text-inv: #ffffff;
+
+  /* 强调色，由 [data-accent] 覆盖 */
+  --mm-accent: #2f5fd0;
+  --mm-accent-hover: #2a55bd;
+  --mm-accent-weak: rgba(47, 95, 208, 0.1);
+  --mm-accent-ring: rgba(47, 95, 208, 0.35);
+
+  /* 文字选中高光。
+     用 color-mix 从强调色派生，换强调色时自动跟随。
+     刻意不复用 --mm-accent-weak：那个只有 10% 浓度，
+     在屏幕上几乎看不见「我选中了哪里」—— 选中反馈必须一眼可见。 */
+  --mm-selection: color-mix(in srgb, var(--mm-accent) 26%, transparent);
+  /* 同词高亮（选中一个词时其他相同词的位置），比选中稍重一点以便区分 */
+  --mm-selection-strong: color-mix(in srgb, var(--mm-accent) 42%, transparent);
+
+  /* 语义色 */
+  --mm-ok: #1a7f37;
+  --mm-warn: #9a6700;
+  --mm-danger: #cf222e;
+  --mm-danger-weak: rgba(207, 34, 46, 0.1);
+
+  /* 编辑器语法高亮（浅色） */
+  --mm-syn-heading: #1a1d21;
+  --mm-syn-strong: #1a1d21;
+  --mm-syn-em: #1a1d21;
+  --mm-syn-link: #2f5fd0;
+  --mm-syn-url: #878e9a;
+  --mm-syn-code: #a04a1f;
+  --mm-syn-code-bg: #f4f5f7;
+  --mm-syn-quote: #6b7280;
+  --mm-syn-marker: #a9b0bb;
+  --mm-syn-hr: #ced2d9;
+
+  /* 预览区代码高亮 */
+  --mm-code-bg: #f6f7f9;
+  --mm-code-border: #e5e7eb;
+  --mm-code-text: #24292f;
+  --mm-hl-keyword: #cf222e;
+  --mm-hl-string: #0a3069;
+  --mm-hl-number: #0550ae;
+  --mm-hl-comment: #6e7781;
+  --mm-hl-function: #8250df;
+  --mm-hl-attr: #953800;
+  --mm-hl-tag: #116329;
+
+  /* ------------------------------------------------------------------
+     排版
+     ------------------------------------------------------------------ */
+
+  /* 界面文字：复古衬线打底 + 中文用雅黑。
+     英文 Georgia —— 老式衬线里最饱满的一支，小字号不发虚，还有印刷味；
+     中文微软雅黑 —— 笔画均匀、横竖同粗，13px 下清爽好认。
+     （仿宋/楷体的笔画对界面小字来说太细，试过，退回了。）
+     两处都用系统自带字体：不引入外部文件，双击打开也能离线用。 */
+  --mm-font-ui: Georgia, "Book Antiqua", Palatino, "Times New Roman",
+    "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "Segoe UI",
+    system-ui, sans-serif;
+  --mm-font-text: "Georgia", "Songti SC", "SimSun", -apple-system, "Segoe UI",
+    "Microsoft YaHei", serif;
+  --mm-font-mono: "Cascadia Code", "JetBrains Mono", Consolas, "SF Mono",
+    "Microsoft YaHei Mono", monospace;
+
+  --mm-fs-ui: 13px;
+  --mm-fs-editor: 15px;
+  --mm-fs-preview: 16px;
+  --mm-fs-sm: 12px;
+  --mm-fs-lg: 15px;
+  --mm-fs-title: 20px;
+
+  --mm-lh-tight: 1.35;
+  --mm-lh-normal: 1.6;
+  --mm-lh-text: 1.8; /* 正文行高，中文阅读舒适区 */
+
+  --mm-measure: 74ch; /* 正文最大宽度 */
+  --mm-weight-normal: 400;
+  --mm-weight-medium: 500;
+  --mm-weight-bold: 700;
+
+  /* ------------------------------------------------------------------
+     间距（4px 基准）
+     ------------------------------------------------------------------ */
+  --mm-sp-1: 4px;
+  --mm-sp-2: 8px;
+  --mm-sp-3: 12px;
+  --mm-sp-4: 16px;
+  --mm-sp-5: 24px;
+  --mm-sp-6: 32px;
+  --mm-sp-7: 48px;
+
+  /* ------------------------------------------------------------------
+     形状与层级
+     ------------------------------------------------------------------ */
+  --mm-radius-sm: 4px;
+  --mm-radius-md: 8px;
+  --mm-radius-lg: 12px;
+  --mm-radius-pill: 999px;
+
+  --mm-shadow-sm: 0 1px 2px rgba(16, 20, 28, 0.06);
+  --mm-shadow-md: 0 4px 16px rgba(16, 20, 28, 0.1);
+  --mm-shadow-lg: 0 16px 48px rgba(16, 20, 28, 0.18);
+
+  /* ------------------------------------------------------------------
+     布局尺寸
+     ------------------------------------------------------------------ */
+  --mm-topbar-h: 44px;
+  --mm-statusbar-h: 26px;
+  --mm-sidebar-w: 264px;
+  --mm-sidebar-w-collapsed: 0px;
+  --mm-split: 50%; /* 分栏比例，由 JS 写入 */
+
+  /* ------------------------------------------------------------------
+     动效
+     ------------------------------------------------------------------ */
+  --mm-dur-fast: 100ms;
+  --mm-dur: 160ms;
+  /* 比 --mm-dur 明显慢一档：用于「欢迎使用 MixMark → MixMark」
+     这类一次性入场动画，短过渡带不动这种幅度的位移 */
+  --mm-dur-slow: 480ms;
+  --mm-ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 尊重系统的「减少动态效果」偏好 */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --mm-dur-fast: 0ms;
+    --mm-dur: 0ms;
+    --mm-dur-slow: 0ms;
+  }
+}

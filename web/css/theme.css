@@ -1,0 +1,459 @@
+/* ==========================================================================
+   MixMark · 主题
+   --------------------------------------------------------------------------
+   两个正交的维度：
+     [data-theme]  底色基调 —— light / sepia / mist / dark / night / navy
+     [data-accent] 强调色  —— ink / emerald / ocean / wine / ginger
+                                   violet / graphite / rose
+
+   设计原则：正文对比度 ≥ 7:1；编辑器与预览区背景一致，避免分栏时出现色块感。
+
+   强调色不再逐个主题手写覆盖，而是每个颜色只声明「三档明度」，由末尾三条
+   映射规则决定哪个主题取哪一档（详见「强调色」一节）。这样 6 主题 × 8 强调
+   色 = 48 套配色不用写 48 组变量。
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   深色
+   -------------------------------------------------------------------------- */
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --mm-bg: #16181d;
+  --mm-bg-sub: #1b1e24;
+  --mm-bg-sunken: #101216;
+  --mm-surface: #1d2026;
+  --mm-surface-2: #24272e;
+  --mm-overlay: rgba(0, 0, 0, 0.55);
+
+  --mm-border: #2c3038;
+  --mm-border-strong: #3d434d;
+
+  --mm-text-1: #e4e7ec;
+  --mm-text-2: #a2a9b6;
+  --mm-text-3: #767d8a;
+  --mm-text-inv: #16181d;
+
+  --mm-ok: #3fb950;
+  --mm-warn: #d29922;
+  --mm-danger: #f85149;
+  --mm-danger-weak: rgba(248, 81, 73, 0.14);
+
+  /* 深色底上需要更高浓度才看得清，否则会被背景吃掉 */
+  --mm-selection: color-mix(in srgb, var(--mm-accent) 34%, transparent);
+  --mm-selection-strong: color-mix(in srgb, var(--mm-accent) 52%, transparent);
+
+  /* 深色下语法高亮不能用纯白，否则刺眼 */
+  --mm-syn-heading: #f0f3f7;
+  --mm-syn-strong: #f0f3f7;
+  --mm-syn-em: #d7dbe2;
+  --mm-syn-url: #767d8a;
+  --mm-syn-code: #f0a878;
+  --mm-syn-code-bg: #24272e;
+  --mm-syn-quote: #8f96a3;
+  --mm-syn-marker: #5c636f;
+  --mm-syn-hr: #3d434d;
+
+  --mm-code-bg: #1b1e24;
+  --mm-code-border: #2c3038;
+  --mm-code-text: #d7dbe2;
+  --mm-hl-keyword: #ff7b72;
+  --mm-hl-string: #a5d6ff;
+  --mm-hl-number: #79c0ff;
+  --mm-hl-comment: #8b949e;
+  --mm-hl-function: #d2a8ff;
+  --mm-hl-attr: #ffa657;
+  --mm-hl-tag: #7ee787;
+
+  --mm-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --mm-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --mm-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.6);
+}
+
+/* --------------------------------------------------------------------------
+   羊皮纸（长时间阅读更护眼）
+   -------------------------------------------------------------------------- */
+[data-theme='sepia'] {
+  color-scheme: light;
+
+  --mm-bg: #f8f3e9;
+  --mm-bg-sub: #f2ebdd;
+  --mm-bg-sunken: #ece3d2;
+  --mm-surface: #fbf7ef;
+  --mm-surface-2: #f2ebdd;
+  --mm-overlay: rgba(60, 45, 25, 0.3);
+
+  --mm-border: #e2d7c3;
+  --mm-border-strong: #cbbda3;
+
+  --mm-text-1: #3b3226;
+  --mm-text-2: #6d6151;
+  /* 原值 #968a76 在 --mm-surface-2（表格头 / 行内代码底）上只有 2.86:1，
+     达不到 3:1 下限，这里压深一档；在 bg 上仍是 3.5:1 */
+  --mm-text-3: #8b7f6c;
+  --mm-text-inv: #fbf7ef;
+
+  --mm-ok: #4f6b2f;
+  --mm-warn: #8a6116;
+  --mm-danger: #a4322c;
+  --mm-danger-weak: rgba(164, 50, 44, 0.1);
+
+  /* 羊皮纸底色本身偏黄，选中色再浓一点才压得住 */
+  --mm-selection: color-mix(in srgb, var(--mm-accent) 28%, transparent);
+  --mm-selection-strong: color-mix(in srgb, var(--mm-accent) 44%, transparent);
+
+  --mm-syn-heading: #2f2820;
+  --mm-syn-strong: #2f2820;
+  --mm-syn-url: #968a76;
+  --mm-syn-code: #8a4a1e;
+  --mm-syn-code-bg: #f2ebdd;
+  --mm-syn-quote: #6a5f50;
+  --mm-syn-marker: #b3a68f;
+  --mm-syn-hr: #cbbda3;
+
+  --mm-code-bg: #f2ebdd;
+  --mm-code-border: #e2d7c3;
+  --mm-code-text: #3b3226;
+  /* sepia 的代码底色偏黄，继承浅色的紫会掉到 4.25:1；这里单独压深一档 */
+  --mm-hl-function: #6a3fc0;
+}
+
+/* --------------------------------------------------------------------------
+   雾灰（低对比柔光，冷调浅色）
+   --------------------------------------------------------------------------
+   与「白昼」的区别不在明暗而在**对比强度**：底色带一点冷灰、正文不到纯黑，
+   长时间盯着不刺眼。代价是对比度天然比白底低，所以正文色仍守在 11:1 以上。
+   -------------------------------------------------------------------------- */
+[data-theme='mist'] {
+  color-scheme: light;
+
+  --mm-bg: #eef1f5;
+  --mm-bg-sub: #e5e9ef;
+  --mm-bg-sunken: #dde2e9;
+  --mm-surface: #f9fafc;
+  --mm-surface-2: #e8ecf2;
+  --mm-overlay: rgba(30, 38, 50, 0.28);
+
+  --mm-border: #d8dee7;
+  --mm-border-strong: #bcc5d1;
+
+  --mm-text-1: #2b333f;
+  --mm-text-2: #57616f;
+  /* 底色本身比白暗，占位色得跟着压深
+     （沿用浅色主题那个 #8590a0 只有 2.87:1，达不到 3:1 下限） */
+  --mm-text-3: #788294;
+  --mm-text-inv: #f9fafc;
+
+  --mm-ok: #1c6b3c;
+  --mm-warn: #8a5b00;
+  --mm-danger: #b5323c;
+  --mm-danger-weak: rgba(181, 50, 60, 0.1);
+
+  /* 底色本身就比白暗，选中色要给得比浅色主题更足 */
+  --mm-selection: color-mix(in srgb, var(--mm-accent) 32%, transparent);
+  --mm-selection-strong: color-mix(in srgb, var(--mm-accent) 48%, transparent);
+
+  --mm-syn-heading: #232a34;
+  --mm-syn-strong: #232a34;
+  --mm-syn-em: #2b333f;
+  --mm-syn-url: #8590a0;
+  --mm-syn-code: #8f4a1c;
+  --mm-syn-code-bg: #e8ecf2;
+  --mm-syn-quote: #606b7a;
+  --mm-syn-marker: #a3adba;
+  --mm-syn-hr: #c3cbd6;
+
+  --mm-code-bg: #e8ecf2;
+  --mm-code-border: #d8dee7;
+  --mm-code-text: #2b333f;
+  --mm-hl-keyword: #b5323c;
+  --mm-hl-string: #0a4a6b;
+  --mm-hl-number: #0a5aa8;
+  --mm-hl-comment: #6c7785;
+  --mm-hl-function: #6a3fc0;
+  --mm-hl-attr: #8a4a1c;
+  --mm-hl-tag: #1c6b3c;
+
+  --mm-shadow-sm: 0 1px 2px rgba(24, 32, 44, 0.07);
+  --mm-shadow-md: 0 4px 16px rgba(24, 32, 44, 0.11);
+  --mm-shadow-lg: 0 16px 48px rgba(24, 32, 44, 0.18);
+}
+
+/* --------------------------------------------------------------------------
+   纯黑（OLED，不发光的地方就真的不发光）
+   --------------------------------------------------------------------------
+   比「墨夜」更极端：底是 #000，对比度最高、也最省电。
+   底色全黑会让边框几乎不可见，所以边框反而要比墨夜**更亮**才看得出分界。
+   -------------------------------------------------------------------------- */
+[data-theme='night'] {
+  color-scheme: dark;
+
+  --mm-bg: #000000;
+  --mm-bg-sub: #0b0c0e;
+  --mm-bg-sunken: #000000;
+  --mm-surface: #0e1013;
+  --mm-surface-2: #17191e;
+  --mm-overlay: rgba(0, 0, 0, 0.72);
+
+  --mm-border: #23262c;
+  --mm-border-strong: #383c44;
+
+  --mm-text-1: #eef1f5;
+  --mm-text-2: #a7aeba;
+  --mm-text-3: #737a86;
+  --mm-text-inv: #000000;
+
+  --mm-ok: #4ac45c;
+  --mm-warn: #dfae4f;
+  --mm-danger: #ff6b62;
+  --mm-danger-weak: rgba(255, 107, 98, 0.16);
+
+  /* 全黑底上「选中」只能靠色块，浓度再加一档 */
+  --mm-selection: color-mix(in srgb, var(--mm-accent) 40%, transparent);
+  --mm-selection-strong: color-mix(in srgb, var(--mm-accent) 58%, transparent);
+
+  --mm-syn-heading: #f5f8fc;
+  --mm-syn-strong: #f5f8fc;
+  --mm-syn-em: #dde2ea;
+  --mm-syn-url: #737a86;
+  --mm-syn-code: #f5b078;
+  --mm-syn-code-bg: #17191e;
+  --mm-syn-quote: #949bab;
+  --mm-syn-marker: #565d69;
+  --mm-syn-hr: #383c44;
+
+  --mm-code-bg: #0e1013;
+  --mm-code-border: #23262c;
+  --mm-code-text: #dde2ea;
+  --mm-hl-keyword: #ff7b72;
+  --mm-hl-string: #a5d6ff;
+  --mm-hl-number: #79c0ff;
+  --mm-hl-comment: #8b949e;
+  --mm-hl-function: #d2a8ff;
+  --mm-hl-attr: #ffa657;
+  --mm-hl-tag: #7ee787;
+
+  --mm-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.6);
+  --mm-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.7);
+  --mm-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.85);
+}
+
+/* --------------------------------------------------------------------------
+   深海（深蓝调，偏冷的夜间阅读）
+   --------------------------------------------------------------------------
+   底色带明显的蓝，正文用一点暖白压住，长时间看不发灰。
+   和墨夜一样属于深底，强调色走 lift 档（见文件末尾的映射规则）。
+   -------------------------------------------------------------------------- */
+[data-theme='navy'] {
+  color-scheme: dark;
+
+  --mm-bg: #0d1522;
+  --mm-bg-sub: #121d2e;
+  --mm-bg-sunken: #080f19;
+  --mm-surface: #131e30;
+  --mm-surface-2: #1a2739;
+  --mm-overlay: rgba(4, 9, 16, 0.6);
+
+  --mm-border: #21304a;
+  --mm-border-strong: #33465f;
+
+  --mm-text-1: #e3e9f3;
+  --mm-text-2: #9dabc0;
+  --mm-text-3: #6e7d94;
+  --mm-text-inv: #0d1522;
+
+  --mm-ok: #46b96b;
+  --mm-warn: #d9a53f;
+  --mm-danger: #f8706a;
+  --mm-danger-weak: rgba(248, 112, 106, 0.16);
+
+  --mm-selection: color-mix(in srgb, var(--mm-accent) 36%, transparent);
+  --mm-selection-strong: color-mix(in srgb, var(--mm-accent) 54%, transparent);
+
+  --mm-syn-heading: #eef3fa;
+  --mm-syn-strong: #eef3fa;
+  --mm-syn-em: #d5dded;
+  --mm-syn-url: #6e7d94;
+  --mm-syn-code: #f0a878;
+  --mm-syn-code-bg: #1a2739;
+  --mm-syn-quote: #8b99ae;
+  --mm-syn-marker: #55647a;
+  --mm-syn-hr: #33465f;
+
+  --mm-code-bg: #121d2e;
+  --mm-code-border: #21304a;
+  --mm-code-text: #d5dded;
+  --mm-hl-keyword: #ff7b72;
+  --mm-hl-string: #a5d6ff;
+  --mm-hl-number: #79c0ff;
+  --mm-hl-comment: #8b949e;
+  --mm-hl-function: #d2a8ff;
+  --mm-hl-attr: #ffa657;
+  --mm-hl-tag: #7ee787;
+
+  --mm-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --mm-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.6);
+  --mm-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.75);
+}
+
+/* --------------------------------------------------------------------------
+   强调色
+   --------------------------------------------------------------------------
+   每个强调色只声明「四档」，而不是为每个主题各写一份：
+
+     --mm-accent-base    纯白底用（白昼）
+     --mm-accent-deep    浅灰底用（雾灰 —— 只压深，不改色相）
+     --mm-accent-warm    暖底用（羊皮纸 —— 底色偏黄，色相往棕靠更协调）
+     --mm-accent-lift    深底用（墨夜 / 纯黑 / 深海 —— 同色会被底色吞掉）
+
+   deep 与 warm 在多数颜色上是同一个取值：只有靓蓝和姜黄真的需要「暖底另给
+  一个色相」。没声明 --mm-accent-warm 的颜色会自动回落到 deep（见下方映射）。
+
+   末尾三条映射规则用 html[...] 把特异性抬高一级，由它们统一决定
+   「哪个主题取哪一档」，顺序无关，也不必逐个主题手写覆盖。
+
+   新增一个强调色 = 补一组变量（不用管主题）；
+   新增一个主题 = 把 id 加进对应那条选择器列表（不用管强调色）。
+   -------------------------------------------------------------------------- */
+
+/* 靛蓝 */
+[data-accent='ink'] {
+  --mm-accent-base: #2f5fd0;
+  --mm-accent-hover-base: #2a55bd;
+  --mm-accent-deep: #2a55bd;
+  --mm-accent-hover-deep: #234ab0;
+  /* 羊皮纸上偏棕更协调。这是从旧版沿用下来的取值，不是单纯压暗 */
+  --mm-accent-warm: #7a5b1e;
+  --mm-accent-hover-warm: #674c18;
+  --mm-accent-lift: #6f9bff;
+  --mm-accent-hover-lift: #82a9ff;
+}
+
+/* 松绿 */
+[data-accent='emerald'] {
+  --mm-accent-base: #1f7a55;
+  --mm-accent-hover-base: #1a6848;
+  --mm-accent-deep: #1a6a49;
+  --mm-accent-hover-deep: #155a3e;
+  --mm-accent-lift: #3fa87a;
+  --mm-accent-hover-lift: #4fbb8b;
+}
+
+/* 湖蓝 */
+[data-accent='ocean'] {
+  --mm-accent-base: #0e7490;
+  --mm-accent-hover-base: #0c6277;
+  --mm-accent-deep: #0c6277;
+  --mm-accent-hover-deep: #0a5365;
+  --mm-accent-lift: #38b2c9;
+  --mm-accent-hover-lift: #4cc4d9;
+}
+
+/* 酒红 */
+[data-accent='wine'] {
+  --mm-accent-base: #8a3a46;
+  --mm-accent-hover-base: #76323c;
+  --mm-accent-deep: #76323c;
+  --mm-accent-hover-deep: #652b34;
+  /* 原值 #c9707e 在墨夜 / 深海的 --mm-surface-2（表格头、行内代码底）上
+     只有 4.34:1，提亮一档到 4.97:1 */
+  --mm-accent-lift: #d17d8b;
+  --mm-accent-hover-lift: #dd8f9c;
+}
+
+/* 姜黄
+   本身偏浅：原值 #b0812a 在白底上只有 3.5:1（做链接字色不够看）。
+   这里压到 #8a5f16 —— 白底 5.5:1、雾灰底 4.9:1，两个浅底都过线；
+   作填充色时反而更稳（其上白字对比度也跟着提高）。
+   羊皮纸底色更暗，还得再深一档（走 deep）。 */
+[data-accent='ginger'] {
+  --mm-accent-base: #8a5f16;
+  --mm-accent-hover-base: #755012;
+  --mm-accent-deep: #6d5015;
+  --mm-accent-hover-deep: #5c4312;
+  --mm-accent-lift: #d1a03f;
+  --mm-accent-hover-lift: #dfae4f;
+}
+
+/* 紫罗兰 */
+[data-accent='violet'] {
+  --mm-accent-base: #6b3fc0;
+  --mm-accent-hover-base: #5c34a8;
+  --mm-accent-deep: #5b35a5;
+  --mm-accent-hover-deep: #4e2d8e;
+  --mm-accent-lift: #b79bf5;
+  --mm-accent-hover-lift: #c6b0f8;
+}
+
+/* 石墨（近中性，适合只想要「有个强调色」而不想要颜色的人） */
+[data-accent='graphite'] {
+  --mm-accent-base: #4a5260;
+  --mm-accent-hover-base: #3d4450;
+  --mm-accent-deep: #3f4652;
+  --mm-accent-hover-deep: #353b45;
+  --mm-accent-lift: #9aa4b4;
+  --mm-accent-hover-lift: #aab4c4;
+}
+
+/* 玫红 */
+[data-accent='rose'] {
+  --mm-accent-base: #b5305f;
+  --mm-accent-hover-base: #9e2a53;
+  --mm-accent-deep: #9c2851;
+  --mm-accent-hover-deep: #862246;
+  --mm-accent-lift: #f08cb0;
+  --mm-accent-hover-lift: #f5a3c0;
+}
+
+/* --------------------------------------------------------------------------
+   四档 → 具体主题的映射
+   --------------------------------------------------------------------------
+   特异性严格递增，不依赖书写顺序：
+     [data-accent]                        (0,1,0)  白底
+     [data-theme='mist'][data-accent]     (0,2,0)  浅灰底
+     [data-theme='sepia'][data-accent]    (0,2,0)  暖底
+     [data-theme='xxx'][data-accent]      (0,2,0)  深底
+
+   --mm-syn-link 一并在这里派生，不必每个主题各写一遍。
+
+   刻意**不写 html 前缀**：这样任意元素带上 data-theme + data-accent 就能
+   局部渲染成那套配色 —— 设置页的主题缩略图正是这么做的，不用把色值在
+   JS 里再抄一份。
+   -------------------------------------------------------------------------- */
+[data-accent] {
+  --mm-accent: var(--mm-accent-base);
+  --mm-accent-hover: var(--mm-accent-hover-base);
+  --mm-accent-weak: color-mix(in srgb, var(--mm-accent) 12%, transparent);
+  --mm-accent-ring: color-mix(in srgb, var(--mm-accent) 36%, transparent);
+  --mm-syn-link: var(--mm-accent);
+}
+
+[data-theme='mist'][data-accent] {
+  --mm-accent: var(--mm-accent-deep);
+  --mm-accent-hover: var(--mm-accent-hover-deep);
+  --mm-accent-weak: color-mix(in srgb, var(--mm-accent) 14%, transparent);
+  --mm-accent-ring: color-mix(in srgb, var(--mm-accent) 36%, transparent);
+  --mm-syn-link: var(--mm-accent);
+}
+
+/* warm 是可选的：没声明的颜色自动用 deep。
+   写 var(--a, var(--b)) 而不是简单地各声明一份，就是为了一处新增颜色时
+   不必再去补四个主题的取值。 */
+[data-theme='sepia'][data-accent] {
+  --mm-accent: var(--mm-accent-warm, var(--mm-accent-deep));
+  --mm-accent-hover: var(--mm-accent-hover-warm, var(--mm-accent-hover-deep));
+  --mm-accent-weak: color-mix(in srgb, var(--mm-accent) 14%, transparent);
+  --mm-accent-ring: color-mix(in srgb, var(--mm-accent) 36%, transparent);
+  --mm-syn-link: var(--mm-accent);
+}
+
+[data-theme='dark'][data-accent],
+[data-theme='night'][data-accent],
+[data-theme='navy'][data-accent] {
+  --mm-accent: var(--mm-accent-lift);
+  --mm-accent-hover: var(--mm-accent-hover-lift);
+  --mm-accent-weak: color-mix(in srgb, var(--mm-accent) 18%, transparent);
+  --mm-accent-ring: color-mix(in srgb, var(--mm-accent) 40%, transparent);
+  --mm-syn-link: var(--mm-accent);
+}
+

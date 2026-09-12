@@ -1,0 +1,616 @@
+/* ==========================================================================
+   MixMark · 布局
+   --------------------------------------------------------------------------
+   应用外壳：顶栏 / 侧栏 / 工作区（编辑 + 预览）/ 状态栏
+
+   ┌─────────────────────────────────────────┐
+   │ .topbar                                 │
+   ├──────┬──────────────────────────────────┤
+   │ .side│ .workspace                       │
+   │ bar  │  ├ .pane-edit                    │
+   │      │  └ .pane-preview                 │
+   ├──────┴──────────────────────────────────┤
+   │ .statusbar                              │
+   └─────────────────────────────────────────┘
+   ========================================================================== */
+
+.app {
+  display: grid;
+  grid-template-rows: var(--mm-topbar-h) 1fr var(--mm-statusbar-h);
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* --------------------------------------------------------------------------
+   顶栏
+   -------------------------------------------------------------------------- */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--mm-sp-2);
+  padding: 0 var(--mm-sp-2);
+  background: var(--mm-bg);
+  border-bottom: 1px solid var(--mm-border);
+  user-select: none;
+  /* 让顶栏可拖动窗口（桌面端 Electron 会用到） */
+  -webkit-app-region: drag;
+}
+
+.topbar button,
+.topbar .segmented {
+  -webkit-app-region: no-drag;
+}
+
+.topbar__spacer {
+  flex: 1;
+}
+
+/* 文档标题：过长省略，脏标记跟随 */
+.doc-title {
+  display: flex;
+  align-items: center;
+  gap: var(--mm-sp-2);
+  min-width: 0;
+  padding: 0 var(--mm-sp-2);
+  font-size: var(--mm-fs-ui);
+  font-weight: var(--mm-weight-medium);
+  color: var(--mm-text-1);
+  transition: opacity var(--mm-dur-slow) var(--mm-ease);
+}
+
+/* 同上：.doc-title 是 flex 容器，hidden 必须显式声明 */
+.doc-title[hidden] {
+  display: none;
+}
+
+/* 开场 3 秒：文档名先藏着。
+   否则同一行会同时出现两处「欢迎使用 MixMark」——
+   品牌位一处，首次启动时欢迎文档的标题又是一处。
+   这个类写在 <html> 上而不是等 JS 添加，是为了避免慢一帧的闪烁。 */
+.is-intro .doc-title {
+  opacity: 0;
+}
+
+.doc-title__text {
+  max-width: 42ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 磁盘直连标记：当前文档绑着磁盘上的真实文件时才出现 */
+.doc-title__disk {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  color: var(--mm-text-3);
+}
+
+.doc-title__disk svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.doc-title__dot {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mm-accent);
+  opacity: 0;
+  transition: opacity var(--mm-dur) var(--mm-ease);
+}
+
+.doc-title__dot.is-dirty {
+  opacity: 1;
+}
+
+/* --------------------------------------------------------------------------
+   品牌名
+
+   「欢迎使用」与「MixMark」并排。
+   收窄前者的宽度，后者就自然落到最左 —— 是真正的位移，不是视觉幌子。
+   -------------------------------------------------------------------------- */
+.brand {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  padding: 0 var(--mm-sp-1) 0 var(--mm-sp-2);
+  /* 它是个按钮（点回首页），先把 UA 自带样式抹平 */
+  border: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: var(--mm-radius-sm);
+  font: inherit;
+  font-size: var(--mm-fs-ui);
+  font-weight: var(--mm-weight-medium);
+  letter-spacing: 0.01em;
+  color: var(--mm-text-1);
+  white-space: nowrap;
+}
+
+/* 「MixMark」与「首页」叠在同一格里：宽度取两者中较宽的那个，
+   悬停时只是换一张脸，顶栏后面的东西不会被顶得跳一下 */
+.brand__mark {
+  display: grid;
+  align-items: center;
+}
+
+.brand__mark > * {
+  grid-area: 1 / 1;
+  transition: opacity var(--mm-dur-fast) var(--mm-ease);
+}
+
+.brand__home {
+  color: var(--mm-accent);
+  opacity: 0;
+}
+
+.brand:hover .brand__name,
+.brand:focus-visible .brand__name {
+  opacity: 0;
+}
+
+.brand:hover .brand__home,
+.brand:focus-visible .brand__home {
+  opacity: 1;
+}
+
+.brand__welcome {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  color: var(--mm-text-3);
+  font-weight: var(--mm-weight-normal);
+  /* 宽度由 JS 写成内联样式（需要先量出真实宽度再收到 0），
+     这里只管透明度与右侧间距，两者一起过渡才不会看着硌硬 */
+  transition: width var(--mm-dur-slow) var(--mm-ease),
+    opacity var(--mm-dur-slow) var(--mm-ease),
+    margin-right var(--mm-dur-slow) var(--mm-ease);
+  margin-right: 0.35em;
+}
+
+.brand.is-settled .brand__welcome {
+  opacity: 0;
+  margin-right: 0;
+}
+
+/* 图标按钮 */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--mm-radius-sm);
+  color: var(--mm-text-2);
+  transition: background var(--mm-dur-fast) var(--mm-ease),
+    color var(--mm-dur-fast) var(--mm-ease);
+}
+
+.icon-btn:hover {
+  background: var(--mm-surface-2);
+  color: var(--mm-text-1);
+}
+
+.icon-btn.is-active {
+  background: var(--mm-accent-weak);
+  color: var(--mm-accent);
+}
+
+.icon-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 分段控件：视图模式切换 */
+.segmented {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  background: var(--mm-surface-2);
+  border-radius: var(--mm-radius-sm);
+}
+
+.segmented button {
+  padding: 3px 10px;
+  border-radius: 3px;
+  font-size: var(--mm-fs-sm);
+  color: var(--mm-text-2);
+  white-space: nowrap;
+  transition: background var(--mm-dur-fast) var(--mm-ease),
+    color var(--mm-dur-fast) var(--mm-ease);
+}
+
+.segmented button:hover {
+  color: var(--mm-text-1);
+}
+
+.segmented button[aria-pressed='true'] {
+  background: var(--mm-bg);
+  color: var(--mm-text-1);
+  font-weight: var(--mm-weight-medium);
+  box-shadow: var(--mm-shadow-sm);
+}
+
+/* --------------------------------------------------------------------------
+   主体：侧栏 + 工作区
+   -------------------------------------------------------------------------- */
+.body {
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* 侧栏：折叠靠宽度过渡，内容固定宽度避免文字重排
+   底色用 bg-sub，而选中的标签与内容区用 surface ——
+   两者的深浅差就是「标签突出来」的视觉来源。 */
+.sidebar {
+  flex: 0 0 var(--mm-sidebar-w);
+  width: var(--mm-sidebar-w);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--mm-bg-sub);
+  border-right: 1px solid var(--mm-border);
+  overflow: hidden;
+  transition: flex-basis var(--mm-dur) var(--mm-ease),
+    width var(--mm-dur) var(--mm-ease);
+}
+
+.app.is-sidebar-collapsed .sidebar {
+  flex-basis: var(--mm-sidebar-w-collapsed);
+  width: var(--mm-sidebar-w-collapsed);
+  border-right-color: transparent;
+}
+
+.sidebar__inner {
+  width: var(--mm-sidebar-w);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+/* --------------------------------------------------------------------------
+   标签
+
+   做成浏览器标签的样子：选中项的底色与下方内容区相同，视觉上连成一体。
+   底部左右两侧的「凹形圆角」用伪元素画：
+   一个透明的 10×10 方块，只给它一个底部圆角，再用 box-shadow 把
+   内容区颜色涂到它周围 —— 方块自身被圆角切掉的那一块就成了凹弧。
+   两个伪元素各伸出 10px，所以标签行左右内边距取 10px 刚好不被裁掉。
+   -------------------------------------------------------------------------- */
+.sidebar__tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  padding: var(--mm-sp-2) 10px 0;
+  flex: 0 0 auto;
+}
+
+.sidebar__tabs button {
+  position: relative;
+  padding: 6px 14px 7px;
+  border-radius: var(--mm-radius-md) var(--mm-radius-md) 0 0;
+  font-size: var(--mm-fs-sm);
+  color: var(--mm-text-2);
+  white-space: nowrap;
+  transition: background var(--mm-dur-fast) var(--mm-ease),
+    color var(--mm-dur-fast) var(--mm-ease);
+}
+
+.sidebar__tabs button:hover {
+  color: var(--mm-text-1);
+  background: var(--mm-surface-2);
+}
+
+.sidebar__tabs button[aria-selected='true'] {
+  background: var(--mm-surface);
+  color: var(--mm-text-1);
+  font-weight: var(--mm-weight-medium);
+}
+
+.sidebar__tabs button[aria-selected='true']:hover {
+  background: var(--mm-surface);
+}
+
+/* 接缝的凹形圆角 */
+.sidebar__tabs button[aria-selected='true']::before,
+.sidebar__tabs button[aria-selected='true']::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  width: 10px;
+  height: 10px;
+  background: transparent;
+  pointer-events: none;
+}
+
+.sidebar__tabs button[aria-selected='true']::before {
+  left: -10px;
+  border-bottom-right-radius: 10px;
+  box-shadow: 5px 5px 0 5px var(--mm-surface);
+}
+
+.sidebar__tabs button[aria-selected='true']::after {
+  right: -10px;
+  border-bottom-left-radius: 10px;
+  box-shadow: -5px 5px 0 5px var(--mm-surface);
+}
+
+/* 内容区：底色与选中标签一致，让两者看起来是一块 */
+.sidebar__panel {
+  display: none;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  background: var(--mm-surface);
+  /* 凹形圆角是靠 box-shadow 向下方多铺 10px 补出来的，会越过接缝进到面板里。
+     标签按钮是定位元素、面板不是，按绘制顺序定位元素更靠上，
+     于是那 10px 补色会盖住面板顶部的内容 —— 搜索框有自己的底色，
+     被盖出两个看得见的半圆。
+     给面板更高的层叠顺序即可：溢出的补色被同色面板挡住（本来也是多余的重复填色），
+     而凹弧本身画在标签行内部，形态不受影响。
+     数值取 1 是为了不越过 :root 里既有的层级（分栏条 2、浮层 100/200）。 */
+  position: relative;
+  z-index: 1;
+}
+
+.sidebar__panel.is-active {
+  display: flex;
+}
+
+/* 侧栏收起时，它与编辑区之间的分隔条也要跟着消失 ——
+   否则左边会留一根多余的细线和一片看不见的抓取区 */
+.app.is-sidebar-collapsed .splitter--sidebar {
+  display: none;
+}
+
+/* 侧栏顶部操作条（原本是重复的「文档」文字标题，已改为操作按钮栏） */
+.panel-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--mm-sp-1);
+  padding: var(--mm-sp-1) var(--mm-sp-2);
+  flex: 0 0 auto;
+}
+
+.panel-bar .icon-btn {
+  width: 24px;
+  height: 24px;
+  color: var(--mm-text-3);
+}
+
+.panel-bar .icon-btn:hover {
+  color: var(--mm-text-1);
+}
+
+.panel-bar__spacer {
+  flex: 1;
+}
+
+/* 搜索框：直接坐在面板顶部的操作条里，不额外占一行 */
+.panel-bar__input {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  padding: 0 var(--mm-sp-2);
+  font-size: var(--mm-fs-ui);
+  color: var(--mm-text-1);
+  background: var(--mm-bg-sub);
+  border: 1px solid transparent;
+  border-radius: var(--mm-radius-sm);
+}
+
+.panel-bar__input:focus {
+  background: var(--mm-bg);
+  border-color: var(--mm-accent);
+}
+
+.panel-bar__input::-webkit-search-cancel-button {
+  cursor: pointer;
+}
+
+.panel-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: var(--mm-sp-4);
+}
+
+/* --------------------------------------------------------------------------
+   工作区：编辑 / 预览
+   -------------------------------------------------------------------------- */
+.workspace {
+  flex: 1;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  background: var(--mm-bg);
+}
+
+.pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.pane--edit {
+  flex: 0 0 var(--mm-split);
+  border-right: 1px solid var(--mm-border);
+}
+
+.pane--preview {
+  flex: 1 1 auto;
+  background: var(--mm-bg);
+}
+
+/* 视图模式 */
+.app[data-mode='edit'] .pane--preview {
+  display: none;
+}
+
+.app[data-mode='edit'] .pane--edit {
+  flex: 1 1 auto;
+  border-right: none;
+}
+
+.app[data-mode='preview'] .pane--edit,
+.app[data-mode='preview'] .splitter {
+  display: none;
+}
+
+.app[data-mode='preview'] .pane--preview {
+  flex: 1 1 auto;
+}
+
+.app[data-mode='preview'] .editor-toolbar {
+  display: none;
+}
+
+/* 分隔条 */
+.splitter {
+  flex: 0 0 1px;
+  width: 1px;
+  cursor: col-resize;
+  background: transparent;
+  position: relative;
+  z-index: 2;
+  /* 用伪元素扩大命中区域，视觉上仍是 1px */
+}
+
+.splitter::after {
+  content: '';
+  position: absolute;
+  inset: 0 -3px;
+}
+
+.splitter:hover::after,
+.splitter.is-dragging::after {
+  background: var(--mm-accent-ring);
+}
+
+body.is-resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+/* 拖动分隔条期间，宽度类过渡一律关掉。
+   .sidebar 的 flex-basis/width 过渡是给「折叠 / 展开」做平滑动画的，
+   拖动时它变成「慢慢追鼠标」：分隔线跟手走了，侧栏区域还在后面追；
+   而 .sidebar__inner 没有过渡、宽度瞬间到位，于是内容比外框先变 ——
+   看起来就是「内容和区域不同步」。 */
+body.is-resizing .sidebar {
+  transition: none;
+}
+
+body.is-resizing iframe {
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+   状态栏
+   -------------------------------------------------------------------------- */
+.statusbar {
+  display: flex;
+  align-items: center;
+  gap: var(--mm-sp-3);
+  padding: 0 var(--mm-sp-3);
+  background: var(--mm-bg-sub);
+  border-top: 1px solid var(--mm-border);
+  font-size: var(--mm-fs-sm);
+  color: var(--mm-text-3);
+  user-select: none;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.statusbar__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mm-sp-1);
+}
+
+.statusbar__item--clickable {
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--mm-radius-sm);
+  transition: background var(--mm-dur-fast) var(--mm-ease),
+    color var(--mm-dur-fast) var(--mm-ease);
+}
+
+.statusbar__item--clickable:hover {
+  background: var(--mm-surface-2);
+  color: var(--mm-text-1);
+}
+
+.statusbar__spacer {
+  flex: 1;
+}
+
+.statusbar .is-ok {
+  color: var(--mm-ok);
+}
+
+.statusbar .is-warn {
+  color: var(--mm-warn);
+}
+
+.statusbar .is-danger {
+  color: var(--mm-danger);
+}
+
+/* --------------------------------------------------------------------------
+   窄屏 / 移动端
+   -------------------------------------------------------------------------- */
+@media (max-width: 860px) {
+  /* 窄屏一律单栏：分栏模式退化为「编辑 + 可切换预览」，
+     否则主区高度会自适应导致整页无法滚动 */
+  .workspace {
+    flex-direction: column;
+  }
+
+  .app[data-mode='split'] .pane--edit {
+    flex: 1 1 auto;
+    border-right: none;
+  }
+
+  .app[data-mode='split'] .pane--preview {
+    display: none;
+  }
+
+  .splitter {
+    display: none;
+  }
+
+  .sidebar {
+    position: absolute;
+    z-index: 20;
+    top: var(--mm-topbar-h);
+    bottom: var(--mm-statusbar-h);
+    left: 0;
+    box-shadow: var(--mm-shadow-md);
+  }
+
+  .doc-title__text {
+    max-width: 22ch;
+  }
+}

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="MixMark">
+  <defs>
+    <linearGradient id="mm-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3b6ee0"/>
+      <stop offset="1" stop-color="#274bb0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 底板 -->
+  <rect x="0" y="0" width="64" height="64" rx="14" fill="url(#mm-bg)"/>
+
+  <!-- 写作基线：三条暗示文本行的横线 -->
+  <g stroke="#ffffff" stroke-linecap="round" opacity="0.34">
+    <line x1="14" y1="46" x2="34" y2="46" stroke-width="3.2"/>
+    <line x1="14" y1="52" x2="26" y2="52" stroke-width="3.2"/>
+  </g>
+
+  <!-- M：代表 Markdown 与 Mix -->
+  <path d="M14 38V22l9 10 9-10v16"
+        fill="none" stroke="#ffffff" stroke-width="5"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- 强调点：Markdown 的「标记」之意 -->
+  <circle cx="47" cy="21" r="4.5" fill="#ffffff" opacity="0.92"/>
+</svg>

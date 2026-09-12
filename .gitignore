@@ -1,0 +1,31 @@
+# 依赖
+node_modules/
+
+# 构建中间产物
+dist/
+build/
+*.tsbuildinfo
+
+# 本地发布产物（可下载的 zip 挂在 GitHub Release 上，不入库）
+release/
+
+# 桌面端打包输出（产物归档在 release/）
+desktop/release/
+desktop/out/
+
+# 安卓构建产物
+android/.gradle/
+android/build/
+android/android/app/build/
+android/android/build/
+android/android/app/debug/
+*.apk
+*.keystore
+
+# 系统与编辑器
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/*.log
+
+# 注意：web/vendor/ 是「产物入库」的依赖包，故意不忽略

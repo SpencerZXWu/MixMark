@@ -1,0 +1,1072 @@
+/* ==========================================================================
+   MixMark · 组件
+   --------------------------------------------------------------------------
+   面板列表 / 命令面板 / 对话框 / 提示条 / 设置页。
+   （布局骨架见 layout.css，编辑器见 editor.css，预览排版见 preview.css）
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   文档树（支持多级文件夹）
+   -------------------------------------------------------------------------- */
+.tree,
+.tree-children {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tree {
+  padding: 0 var(--mm-sp-2) var(--mm-sp-4);
+}
+
+/* 「展开的文件夹与下一个同级文件夹之间空一行」 */
+.tree-folder.has-gap-after {
+  margin-bottom: 14px;
+}
+
+.tree-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 26px;
+  padding-right: var(--mm-sp-2);
+  border-radius: var(--mm-radius-sm);
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--mm-dur-fast) var(--mm-ease);
+}
+
+.tree-row:hover {
+  background: var(--mm-surface-2);
+}
+
+/* ---- 文件夹 ---- */
+.tree-row--folder.is-selected {
+  background: var(--mm-accent-weak);
+}
+
+.tree-folder.is-expanded > .tree-row .tree-chevron {
+  transform: rotate(90deg);
+}
+
+.tree-folder.is-expanded > .tree-row .tree-icon {
+  color: var(--mm-accent);
+}
+
+.tree-chevron {
+  flex: 0 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mm-text-3);
+  transition: transform var(--mm-dur-fast) var(--mm-ease);
+}
+
+.tree-chevron svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tree-chevron:hover {
+  color: var(--mm-text-1);
+}
+
+/* ---- 图标与文字 ---- */
+.tree-icon {
+  flex: 0 0 15px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--mm-text-3);
+}
+
+.tree-icon svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 文档行的左内边距比同级文件夹多 19px（与文件夹箭头同宽），
+   这样文件夹与文档的图标自然对齐成一列 —— 不需要负外边距去凑。 */
+
+.tree-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--mm-fs-ui);
+  color: var(--mm-text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: var(--mm-sp-2);
+}
+
+.tree-row--doc .tree-body .tree-name {
+  flex: 1 1 auto;
+}
+
+.tree-meta {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--mm-text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- 当前打开的文档 ---- */
+.tree-doc.is-active > .tree-row {
+  background: var(--mm-accent-weak);
+}
+
+.tree-doc.is-active .tree-name {
+  color: var(--mm-accent);
+  font-weight: var(--mm-weight-medium);
+}
+
+.tree-doc.is-active .tree-icon {
+  color: var(--mm-accent);
+}
+
+/* ---- 行内操作按钮 ---- */
+.tree-actions {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity var(--mm-dur-fast) var(--mm-ease);
+}
+
+.tree-row:hover .tree-actions,
+.tree-row:focus-within .tree-actions {
+  opacity: 1;
+}
+
+.tree-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--mm-radius-sm);
+  color: var(--mm-text-3);
+}
+
+.tree-actions button:hover {
+  background: var(--mm-surface);
+  color: var(--mm-text-1);
+}
+
+.tree-actions button.is-danger:hover {
+  color: var(--mm-danger);
+  background: var(--mm-danger-weak);
+}
+
+.tree-actions svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---- 拖拽反馈 ---- */
+.tree-row.is-dragging,
+.tree-doc.is-dragging > .tree-row {
+  opacity: 0.4;
+}
+
+.tree-row.is-drop-target {
+  background: var(--mm-accent-weak);
+  box-shadow: inset 0 0 0 1px var(--mm-accent-ring);
+}
+
+/* 拖到空白处 = 移到根目录，用虚线框把「根」这个落点显式画出来 */
+.tree.is-drop-root {
+  outline: 1px dashed var(--mm-accent-ring);
+  outline-offset: -4px;
+  border-radius: var(--mm-radius-sm);
+}
+
+/* --------------------------------------------------------------------------
+   搜索结果
+   -------------------------------------------------------------------------- */
+.search-results {
+  list-style: none;
+  margin: 0;
+  padding: 0 var(--mm-sp-2);
+}
+
+.search-summary {
+  padding: var(--mm-sp-2) var(--mm-sp-2) var(--mm-sp-2);
+  font-size: 11px;
+  color: var(--mm-text-3);
+}
+
+/* 同一篇文档只出现一次的分组标题 */
+.search-doc {
+  margin: var(--mm-sp-3) 0 var(--mm-sp-1);
+  padding: 0 var(--mm-sp-2);
+  font-size: var(--mm-fs-sm);
+  font-weight: var(--mm-weight-medium);
+  color: var(--mm-text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-doc:first-of-type {
+  margin-top: var(--mm-sp-1);
+}
+
+.search-hit {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--mm-sp-2);
+  width: 100%;
+  padding: 4px var(--mm-sp-2);
+  border-radius: var(--mm-radius-sm);
+  text-align: left;
+  transition: background var(--mm-dur-fast) var(--mm-ease);
+}
+
+.search-hit:hover {
+  background: var(--mm-surface-2);
+}
+
+.search-hit__line {
+  flex: 0 0 auto;
+  min-width: 20px;
+  font-family: var(--mm-font-mono);
+  font-size: 11px;
+  color: var(--mm-text-3);
+  font-variant-numeric: tabular-nums;
+  padding-top: 1px;
+}
+
+.search-hit__text {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--mm-fs-sm);
+  line-height: 1.5;
+  color: var(--mm-text-2);
+  /* 命中行可能很长，允许折成两行，再多就裁掉 */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+.search-hit__text mark {
+  background: var(--mm-selection-strong);
+  color: var(--mm-text-1);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* --------------------------------------------------------------------------
+   菜单栏（文件 / 编辑）
+
+   展开的面板是绝对定位的浮层。它必须比工作区画得晚，否则会被编辑区盖住 ——
+   顶栏本身不是定位元素，定位任务落在 .menubar 上。
+   层级取 30：高过分栏条（2）与工具栏浮层（5），低过命令面板/设置（100）。
+   -------------------------------------------------------------------------- */
+.menubar {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 30;
+}
+
+.menubar__menu {
+  position: relative;
+}
+
+.menubar__btn {
+  padding: 4px var(--mm-sp-2);
+  border-radius: var(--mm-radius-sm);
+  font-size: var(--mm-fs-ui);
+  color: var(--mm-text-2);
+  transition: background var(--mm-dur-fast) var(--mm-ease),
+    color var(--mm-dur-fast) var(--mm-ease);
+}
+
+.menubar__btn:hover {
+  background: var(--mm-surface-2);
+  color: var(--mm-text-1);
+}
+
+.menubar__btn[aria-expanded='true'] {
+  background: var(--mm-surface-2);
+  color: var(--mm-text-1);
+}
+
+.menubar__popup {
+  position: absolute;
+  top: calc(100% + var(--mm-sp-1) + 2px);
+  left: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 210px;
+  padding: var(--mm-sp-1);
+  background: var(--mm-surface);
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-md);
+  box-shadow: var(--mm-shadow-md);
+}
+
+/* [hidden] 在 UA 样式表里只是 display:none，会被上面那条 display:flex 覆盖
+   （作者样式优先于 UA 样式），所以必须显式再写一遍 */
+.menubar__popup[hidden] {
+  display: none;
+}
+
+.menubar__item {
+  display: flex;
+  align-items: center;
+  gap: var(--mm-sp-3);
+  width: 100%;
+  padding: 5px var(--mm-sp-2);
+  border-radius: var(--mm-radius-sm);
+  font-size: var(--mm-fs-ui);
+  color: var(--mm-text-1);
+  text-align: left;
+}
+
+.menubar__item:hover:not(:disabled),
+.menubar__item:focus-visible:not(:disabled) {
+  background: var(--mm-accent);
+  color: var(--mm-text-inv);
+}
+
+.menubar__item:disabled {
+  color: var(--mm-text-3);
+  cursor: default;
+}
+
+.menubar__label {
+  flex: 1 1 auto;
+  white-space: nowrap;
+}
+
+.menubar__key {
+  flex: 0 0 auto;
+  font-size: var(--mm-fs-sm);
+  color: var(--mm-text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.menubar__item:hover:not(:disabled) .menubar__key,
+.menubar__item:focus-visible:not(:disabled) .menubar__key {
+  color: var(--mm-text-inv);
+  opacity: 0.8;
+}
+
+.menubar__sep {
+  flex: 0 0 auto;
+  height: 1px;
+  margin: var(--mm-sp-1) 0;
+  background: var(--mm-border);
+}
+
+/* --------------------------------------------------------------------------
+   文档内查找替换
+
+   插在工具栏与编辑区之间的独立一行：不遮挡正文，也不会被编辑区的滚动带走。
+   -------------------------------------------------------------------------- */
+.findbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mm-sp-1);
+  flex: 0 0 auto;
+  padding: var(--mm-sp-1) var(--mm-sp-2);
+  background: var(--mm-bg-sub);
+  border-bottom: 1px solid var(--mm-border);
+}
+
+/* 同上：必须显式盖过 display:flex，否则 hidden 会失效 */
+.findbar[hidden] {
+  display: none;
+}
+
+.findbar__row {
+  display: flex;
+  align-items: center;
+  gap: var(--mm-sp-1);
+}
+
+/* 查找模式下第二行整行不出现 */
+.findbar:not(.is-replace) .findbar__row--replace {
+  display: none;
+}
+
+.findbar__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 26px;
+  padding: 0 var(--mm-sp-2);
+  font-size: var(--mm-fs-ui);
+  color: var(--mm-text-1);
+  background: var(--mm-bg);
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-sm);
+}
+
+.findbar__input:focus {
+  border-color: var(--mm-accent);
+  box-shadow: inset 0 0 0 1px var(--mm-accent-ring);
+}
+
+.findbar__count {
+  flex: 0 0 auto;
+  min-width: 5em;
+  font-size: var(--mm-fs-sm);
+  color: var(--mm-text-3);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.findbar__icon {
+  width: 24px;
+  height: 24px;
+  color: var(--mm-text-3);
+}
+
+.findbar__icon:hover {
+  color: var(--mm-text-1);
+}
+
+.findbar__case {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mm-sp-1);
+  flex: 0 0 auto;
+  padding: 0 var(--mm-sp-1);
+  font-size: var(--mm-fs-sm);
+  color: var(--mm-text-3);
+  cursor: pointer;
+}
+
+.findbar__case input {
+  width: 13px;
+  height: 13px;
+  accent-color: var(--mm-accent);
+  cursor: pointer;
+}
+
+.findbar__btn {
+  flex: 0 0 auto;
+  height: 26px;
+  padding: 0 var(--mm-sp-2);
+  font-size: var(--mm-fs-sm);
+  color: var(--mm-text-1);
+  background: var(--mm-surface-2);
+  border-radius: var(--mm-radius-sm);
+  transition: background var(--mm-dur-fast) var(--mm-ease);
+}
+
+.findbar__btn:hover {
+  background: var(--mm-bg-sunken);
+}
+
+/* 文档行左侧的「在应用内关闭」。
+   借用为文件夹箭头预留的缩进槽，负外边距把它拉回去 ——
+   否则磁盘文档的图标会比普通文档靠右一格，整列参差不齐。
+   写在 .tree-actions 之后，靠顺序盖掉它的 margin-left: auto。 */
+.tree-actions--lead {
+  margin-left: -17px;
+  margin-right: 1px;
+}
+
+/* --------------------------------------------------------------------------
+   大纲
+   -------------------------------------------------------------------------- */
+.outline {
+  list-style: none;
+  margin: 0;
+  padding: 0 var(--mm-sp-2);
+}
+
+.outline__item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 4px var(--mm-sp-2);
+  border-radius: var(--mm-radius-sm);
+  font-size: var(--mm-fs-ui);
+  color: var(--mm-text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: background var(--mm-dur-fast) var(--mm-ease),
+    color var(--mm-dur-fast) var(--mm-ease);
+}
+
+.outline__item:hover {
+  background: var(--mm-surface-2);
+  color: var(--mm-text-1);
+}
+
+.outline__item.is-active {
+  color: var(--mm-accent);
+  background: var(--mm-accent-weak);
+}
+
+.outline__item[data-level='1'] {
+  padding-left: var(--mm-sp-2);
+  color: var(--mm-text-1);
+  font-weight: var(--mm-weight-medium);
+}
+.outline__item[data-level='2'] {
+  padding-left: var(--mm-sp-4);
+}
+.outline__item[data-level='3'] {
+  padding-left: var(--mm-sp-5);
+}
+.outline__item[data-level='4'] {
+  padding-left: var(--mm-sp-6);
+  font-size: var(--mm-fs-sm);
+}
+.outline__item[data-level='5'],
+.outline__item[data-level='6'] {
+  padding-left: var(--mm-sp-6);
+  font-size: var(--mm-fs-sm);
+  color: var(--mm-text-3);
+}
+
+/* 面板内的空状态 */
+.panel-empty {
+  padding: var(--mm-sp-3);
+  font-size: var(--mm-fs-sm);
+  color: var(--mm-text-3);
+  line-height: var(--mm-lh-normal);
+}
+
+/* --------------------------------------------------------------------------
+   浮层通用（命令面板 / 设置 / 对话框共用）
+   -------------------------------------------------------------------------- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  background: var(--mm-overlay);
+  animation: mm-fade-in var(--mm-dur) var(--mm-ease);
+}
+
+.overlay--center {
+  align-items: center;
+  justify-content: center;
+  padding: var(--mm-sp-5);
+}
+
+.overlay--top {
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12vh;
+}
+
+@keyframes mm-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes mm-rise {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   命令面板
+   -------------------------------------------------------------------------- */
+.palette {
+  width: min(560px, 100%);
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--mm-surface);
+  border: 1px solid var(--mm-border-strong);
+  border-radius: var(--mm-radius-lg);
+  box-shadow: var(--mm-shadow-lg);
+  overflow: hidden;
+  animation: mm-rise var(--mm-dur) var(--mm-ease);
+}
+
+.palette__input-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--mm-sp-2);
+  padding: var(--mm-sp-3) var(--mm-sp-4);
+  border-bottom: 1px solid var(--mm-border);
+  flex: 0 0 auto;
+}
+
+.palette__input-wrap svg {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--mm-text-3);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+}
+
+.palette__input {
+  flex: 1;
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: var(--mm-fs-lg);
+  color: var(--mm-text-1);
+}
+
+.palette__input:focus {
+  border: none;
+}
+
+.palette__list {
+  list-style: none;
+  margin: 0;
+  padding: var(--mm-sp-1);
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.palette__item {
+  display: flex;
+  align-items: center;
+  gap: var(--mm-sp-3);
+  padding: 7px var(--mm-sp-3);
+  border-radius: var(--mm-radius-sm);
+  cursor: pointer;
+}
+
+.palette__item[aria-selected='true'] {
+  background: var(--mm-accent-weak);
+}
+
+.palette__item-title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--mm-fs-ui);
+  color: var(--mm-text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.palette__item[aria-selected='true'] .palette__item-title {
+  color: var(--mm-accent);
+}
+
+.palette__item-group {
+  font-size: 11px;
+  color: var(--mm-text-3);
+}
+
+.palette__empty {
+  padding: var(--mm-sp-5);
+  text-align: center;
+  color: var(--mm-text-3);
+  font-size: var(--mm-fs-ui);
+}
+
+/* --------------------------------------------------------------------------
+   键盘按键标记
+   -------------------------------------------------------------------------- */
+kbd.mm-kbd {
+  font-family: var(--mm-font-mono);
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 5px;
+  color: var(--mm-text-2);
+  background: var(--mm-surface-2);
+  border: 1px solid var(--mm-border-strong);
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   对话框
+   -------------------------------------------------------------------------- */
+.dialog {
+  width: min(420px, 100%);
+  background: var(--mm-surface);
+  border: 1px solid var(--mm-border-strong);
+  border-radius: var(--mm-radius-lg);
+  box-shadow: var(--mm-shadow-lg);
+  padding: var(--mm-sp-5);
+  animation: mm-rise var(--mm-dur) var(--mm-ease);
+}
+
+.dialog__title {
+  margin: 0 0 var(--mm-sp-2);
+  font-size: var(--mm-fs-lg);
+  font-weight: var(--mm-weight-bold);
+  color: var(--mm-text-1);
+}
+
+.dialog__message {
+  margin: 0 0 var(--mm-sp-4);
+  font-size: var(--mm-fs-ui);
+  color: var(--mm-text-2);
+  line-height: var(--mm-lh-normal);
+  white-space: pre-wrap;
+}
+
+.dialog__field {
+  width: 100%;
+  margin-bottom: var(--mm-sp-5);
+  font-size: var(--mm-fs-ui);
+}
+
+.dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--mm-sp-2);
+}
+
+/* --------------------------------------------------------------------------
+   按钮
+   -------------------------------------------------------------------------- */
+.btn {
+  padding: 6px 14px;
+  border-radius: var(--mm-radius-sm);
+  font-size: var(--mm-fs-ui);
+  font-weight: var(--mm-weight-medium);
+  color: var(--mm-text-1);
+  background: var(--mm-surface-2);
+  transition: background var(--mm-dur-fast) var(--mm-ease),
+    color var(--mm-dur-fast) var(--mm-ease);
+}
+
+.btn:hover {
+  background: var(--mm-bg-sunken);
+}
+
+.btn--primary {
+  background: var(--mm-accent);
+  color: var(--mm-text-inv);
+}
+
+.btn--primary:hover {
+  background: var(--mm-accent-hover);
+}
+
+.btn--danger {
+  background: var(--mm-danger-weak);
+  color: var(--mm-danger);
+}
+
+.btn--danger:hover {
+  background: var(--mm-danger);
+  color: #fff;
+}
+
+.btn--ghost {
+  background: none;
+}
+
+.btn--ghost:hover {
+  background: var(--mm-surface-2);
+}
+
+/* --------------------------------------------------------------------------
+   设置页
+   -------------------------------------------------------------------------- */
+.settings {
+  width: min(560px, 100%);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--mm-surface);
+  border: 1px solid var(--mm-border-strong);
+  border-radius: var(--mm-radius-lg);
+  box-shadow: var(--mm-shadow-lg);
+  overflow: hidden;
+  animation: mm-rise var(--mm-dur) var(--mm-ease);
+}
+
+.settings__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--mm-sp-4) var(--mm-sp-5);
+  border-bottom: 1px solid var(--mm-border);
+  flex: 0 0 auto;
+}
+
+.settings__head h2 {
+  margin: 0;
+  font-size: var(--mm-fs-lg);
+  font-weight: var(--mm-weight-bold);
+}
+
+.settings__body {
+  overflow-y: auto;
+  padding: var(--mm-sp-2) var(--mm-sp-5) var(--mm-sp-5);
+}
+
+.settings__group {
+  padding: var(--mm-sp-4) 0;
+  border-bottom: 1px solid var(--mm-border);
+}
+
+.settings__group:last-child {
+  border-bottom: none;
+}
+
+.settings__group-title {
+  font-size: 11px;
+  font-weight: var(--mm-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--mm-text-3);
+  margin-bottom: var(--mm-sp-3);
+}
+
+.settings__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mm-sp-4);
+  padding: var(--mm-sp-2) 0;
+}
+
+.settings__row-label {
+  font-size: var(--mm-fs-ui);
+  color: var(--mm-text-1);
+}
+
+.settings__row-hint {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--mm-fs-sm);
+  color: var(--mm-text-3);
+}
+
+.settings__control {
+  flex: 0 0 auto;
+}
+
+.settings__control select {
+  padding: 5px 8px;
+  border-radius: var(--mm-radius-sm);
+  border: 1px solid var(--mm-border-strong);
+  background: var(--mm-bg);
+  color: var(--mm-text-1);
+  font-size: var(--mm-fs-ui);
+  min-width: 110px;
+}
+
+.settings__control input[type='range'] {
+  width: 130px;
+  accent-color: var(--mm-accent);
+  vertical-align: middle;
+}
+
+.settings__control input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--mm-accent);
+  vertical-align: middle;
+}
+
+/* 色板 */
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mm-sp-2);
+  padding-bottom: var(--mm-sp-1);
+}
+
+.swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+  transition: transform var(--mm-dur-fast) var(--mm-ease);
+}
+
+.swatch:hover {
+  transform: scale(1.12);
+}
+
+.swatch[aria-pressed='true'] {
+  border-color: var(--mm-text-1);
+}
+
+/* --------------------------------------------------------------------------
+   主题缩略图
+   --------------------------------------------------------------------------
+   每张卡片里的 .theme-card__pane 自带 data-theme / data-accent，
+   它内部的令牌按那套配色解析 —— 是「真渲染」，不是另画一张示意图，
+   所以永远跟真实主题一致（theme.css 的映射规则刻意没写 html 前缀，
+   就是为了支持这种局部渲染）。
+   -------------------------------------------------------------------------- */
+.themes {
+  display: grid;
+  /* 固定三列：6 套主题正好 3 × 2 排满。
+     用 auto-fill 会变成 5 + 1，第二行孤零零挂一张，很难看 */
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--mm-sp-2);
+  padding-bottom: var(--mm-sp-1);
+}
+
+.theme-card {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 5px;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-md);
+  background: transparent;
+  cursor: pointer;
+  transition: border-color var(--mm-dur-fast) var(--mm-ease);
+}
+
+.theme-card:hover {
+  border-color: var(--mm-border-strong);
+}
+
+.theme-card[aria-pressed='true'] {
+  border-color: var(--mm-accent);
+  box-shadow: 0 0 0 1px var(--mm-accent);
+}
+
+.theme-card__pane {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  height: 36px;
+  padding: 0 7px;
+  border-radius: var(--mm-radius-sm);
+  /* 用主题自己的边框色勾一圈，纯黑这类底色才看得出缩略图边界 */
+  box-shadow: inset 0 0 0 1px var(--mm-border);
+  background: var(--mm-bg);
+}
+
+.theme-card__line {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--mm-text-1);
+}
+
+.theme-card__line--sub {
+  width: 62%;
+  background: var(--mm-text-2);
+}
+
+.theme-card__line--accent {
+  width: 40%;
+  background: var(--mm-accent);
+}
+
+.theme-card__name {
+  font-size: 11px;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--mm-text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.theme-card[aria-pressed='true'] .theme-card__name {
+  color: var(--mm-text-1);
+}
+
+/* --------------------------------------------------------------------------
+   提示条
+   -------------------------------------------------------------------------- */
+.toast-host {
+  position: fixed;
+  bottom: calc(var(--mm-statusbar-h) + var(--mm-sp-4));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--mm-sp-2);
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--mm-sp-2);
+  max-width: 60ch;
+  padding: 8px var(--mm-sp-4);
+  border-radius: var(--mm-radius-pill);
+  background: var(--mm-text-1);
+  color: var(--mm-bg);
+  font-size: var(--mm-fs-ui);
+  box-shadow: var(--mm-shadow-md);
+  pointer-events: auto;
+  animation: mm-toast-in var(--mm-dur) var(--mm-ease);
+}
+
+.toast.is-leaving {
+  animation: mm-toast-out var(--mm-dur) var(--mm-ease) forwards;
+}
+
+.toast--danger {
+  background: var(--mm-danger);
+  color: #fff;
+}
+
+.toast--ok {
+  background: var(--mm-ok);
+  color: #fff;
+}
+
+@keyframes mm-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes mm-toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}

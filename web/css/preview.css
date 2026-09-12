@@ -1,0 +1,535 @@
+/* ==========================================================================
+   MixMark · 预览区
+   --------------------------------------------------------------------------
+   Markdown 渲染结果的排版。这一块决定「读起来是否舒服」，是本项目的核心
+   资产，改动需谨慎。
+
+   设计要点：
+   - 正文栏宽 74ch 居中，中文单行 35~45 字，符合最佳阅读区间
+   - 中文不用衬线体做正文会更清爽，但数学与代码需要区分，故正文走
+     --mm-font-text（可被设置项切换）
+   - 所有间距用 <p> 之间的 margin 实现，不额外套容器
+   ========================================================================== */
+
+.preview-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+
+  /* 必须是定位上下文：行号索引依赖 .mm-block 的 offsetTop，
+     若这里不定位，offsetParent 会一路向上找到别处，同步滚动坐标全错。 */
+  position: relative;
+}
+
+.preview {
+  max-width: var(--mm-measure);
+  margin: 0 auto;
+  padding: var(--mm-sp-6) var(--mm-sp-6) 45vh;
+  font-family: var(--mm-font-text);
+  font-size: var(--mm-fs-preview);
+  line-height: var(--mm-lh-text);
+  color: var(--mm-text-1);
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* 只看预览时把阅读栏靠左。
+   分栏下两边各占一半，居中与否看不出差别；切到全宽预览后居中就会
+   让正文飘在屏幕中间，从编辑区切过来视线得重新找一遍起点。
+   宽度仍由 --mm-measure 限制（行宽依旧受控），只是不再居中。 */
+.app[data-mode='preview'] .preview {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+/* 每个顶层块由渲染管线包一层，用于滚动同步定位 */
+.preview .mm-block {
+  /* 不设 padding/border，让内部元素的 margin 可以正常穿透与折叠 */
+  position: relative;
+}
+
+/* --------------------------------------------------------------------------
+   标题
+   层级靠字号 + 上间距区分，不靠颜色
+   -------------------------------------------------------------------------- */
+.preview h1,
+.preview h2,
+.preview h3,
+.preview h4,
+.preview h5,
+.preview h6 {
+  font-family: var(--mm-font-ui);
+  line-height: var(--mm-lh-tight);
+  color: var(--mm-text-1);
+  margin: var(--mm-sp-6) 0 var(--mm-sp-3);
+  scroll-margin-top: var(--mm-sp-5);
+}
+
+.preview h1 {
+  font-size: 1.7em;
+  font-weight: var(--mm-weight-bold);
+  letter-spacing: -0.02em;
+  margin-top: var(--mm-sp-2);
+}
+
+.preview h2 {
+  font-size: 1.35em;
+  font-weight: var(--mm-weight-bold);
+  letter-spacing: -0.01em;
+  padding-bottom: var(--mm-sp-2);
+  border-bottom: 1px solid var(--mm-border);
+}
+
+.preview h3 {
+  font-size: 1.15em;
+  font-weight: var(--mm-weight-bold);
+}
+
+.preview h4 {
+  font-size: 1em;
+  font-weight: var(--mm-weight-bold);
+}
+
+.preview h5,
+.preview h6 {
+  font-size: 0.92em;
+  font-weight: var(--mm-weight-bold);
+  color: var(--mm-text-2);
+}
+
+/* 标题后面紧跟的段落少留一点空隙 */
+.preview h1 + p,
+.preview h2 + p,
+.preview h3 + p,
+.preview h4 + p,
+.preview h5 + p,
+.preview h6 + p {
+  margin-top: 0;
+}
+
+/* --------------------------------------------------------------------------
+   段落与文本
+   -------------------------------------------------------------------------- */
+.preview p {
+  margin: 0 0 var(--mm-sp-4);
+}
+
+.preview strong {
+  font-weight: var(--mm-weight-bold);
+}
+
+.preview em {
+  font-style: italic;
+}
+
+.preview del {
+  color: var(--mm-text-3);
+}
+
+.preview a {
+  color: var(--mm-accent);
+  text-decoration: none;
+  border-bottom: 1px solid var(--mm-accent-ring);
+  transition: border-color var(--mm-dur-fast) var(--mm-ease);
+}
+
+.preview a:hover {
+  border-bottom-color: var(--mm-accent);
+}
+
+.preview hr {
+  height: 1px;
+  border: none;
+  background: var(--mm-border);
+  margin: var(--mm-sp-6) 0;
+}
+
+/* --------------------------------------------------------------------------
+   列表
+   -------------------------------------------------------------------------- */
+.preview ul,
+.preview ol {
+  margin: 0 0 var(--mm-sp-4);
+  padding-left: 1.6em;
+}
+
+.preview li {
+  margin-bottom: var(--mm-sp-1);
+}
+
+.preview li > ul,
+.preview li > ol {
+  margin-top: var(--mm-sp-1);
+  margin-bottom: 0;
+}
+
+.preview li::marker {
+  color: var(--mm-text-3);
+}
+
+/* 任务列表
+   marked 只输出 <li><input type="checkbox">，不会给 li 加类名，
+   所以用 :has() 反向选中「里面含复选框的 li」。
+   比在渲染管线里手工打标记更省一层 JS。 */
+.preview li:has(> input[type='checkbox']) {
+  list-style: none;
+  margin-left: -1.4em;
+}
+
+.preview li:has(> input[type='checkbox']) input[type='checkbox'] {
+  margin-right: 0.5em;
+  vertical-align: middle;
+  accent-color: var(--mm-accent);
+  width: 14px;
+  height: 14px;
+}
+
+/* --------------------------------------------------------------------------
+   引用
+   -------------------------------------------------------------------------- */
+.preview blockquote {
+  margin: 0 0 var(--mm-sp-4);
+  padding: var(--mm-sp-1) 0 var(--mm-sp-1) var(--mm-sp-4);
+  border-left: 3px solid var(--mm-border-strong);
+  color: var(--mm-text-2);
+}
+
+.preview blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+.preview blockquote blockquote {
+  margin-top: var(--mm-sp-3);
+}
+
+/* --------------------------------------------------------------------------
+   行内代码与代码块
+   -------------------------------------------------------------------------- */
+.preview code {
+  font-family: var(--mm-font-mono);
+  font-size: 0.88em;
+  background: var(--mm-code-bg);
+  border: 1px solid var(--mm-code-border);
+  border-radius: 3px;
+  padding: 0.1em 0.35em;
+  color: var(--mm-code-text);
+  word-break: break-word;
+}
+
+/* 文本文档的正文：不排版、不折行，原样呈现。
+   用 pre-wrap 而不是 pre —— 不换行的话，一行特别长的文本会把整个预览区
+   撑出横向滚动条，比折行难用得多。 */
+.preview img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--mm-radius-sm);
+}
+
+/* 引用不到原图时的占位框（图片没被拖入过，或者换机器了）。
+   不给尺寸的话 img 无 src 就是 0 高，用户只看到一块空白，会以为渲染坏了。 */
+.preview img.is-missing {
+  display: inline-block;
+  min-width: 140px;
+  min-height: 80px;
+  outline: 1px dashed var(--mm-border-strong);
+  outline-offset: -1px;
+  background: var(--mm-bg-sunken);
+}
+
+.preview .mm-block--plain {
+  position: relative;
+}
+
+.preview .mm-plain {
+  margin: 0;
+  font-family: var(--mm-font-mono);
+  font-size: 14px;
+  line-height: var(--mm-lh-normal);
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--mm-text-1);
+}
+
+.preview pre {
+  margin: 0 0 var(--mm-sp-4);
+  padding: var(--mm-sp-3) var(--mm-sp-4);
+  background: var(--mm-code-bg);
+  border: 1px solid var(--mm-code-border);
+  border-radius: var(--mm-radius-md);
+  overflow-x: auto;
+  line-height: 1.6;
+  /* 代码块内部禁用连字，避免 ffi 变成连体字符 */
+  font-variant-ligatures: none;
+}
+
+.preview pre code {
+  display: block;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.85em;
+  color: var(--mm-code-text);
+  white-space: pre;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+/* 代码块右上角语言标签 */
+.preview pre[data-lang]::before {
+  content: attr(data-lang);
+  position: absolute;
+  top: var(--mm-sp-2);
+  right: var(--mm-sp-3);
+  font-family: var(--mm-font-ui);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mm-text-3);
+  pointer-events: none;
+}
+
+.preview .mm-block:has(pre) {
+  position: relative;
+}
+
+/* 宽表格在自己的块内横向滚动，不撑破正文栏宽 */
+.preview .mm-block--table {
+  overflow-x: auto;
+}
+
+/* --------------------------------------------------------------------------
+   highlight.js 主题（用变量写，自动适配明暗）
+   -------------------------------------------------------------------------- */
+.preview .hljs-keyword,
+.preview .hljs-selector-tag,
+.preview .hljs-literal,
+.preview .hljs-doctag,
+.preview .hljs-name {
+  color: var(--mm-hl-keyword);
+}
+
+.preview .hljs-string,
+.preview .hljs-regexp,
+.preview .hljs-addition,
+.preview .hljs-meta .hljs-string {
+  color: var(--mm-hl-string);
+}
+
+.preview .hljs-number,
+.preview .hljs-symbol,
+.preview .hljs-bullet,
+.preview .hljs-variable,
+.preview .hljs-template-variable,
+.preview .hljs-selector-attr,
+.preview .hljs-selector-pseudo,
+.preview .hljs-link {
+  color: var(--mm-hl-number);
+}
+
+.preview .hljs-comment,
+.preview .hljs-quote,
+.preview .hljs-deletion,
+.preview .hljs-meta {
+  color: var(--mm-hl-comment);
+}
+
+.preview .hljs-title,
+.preview .hljs-title.function_,
+.preview .hljs-section,
+.preview .hljs-built_in,
+.preview .hljs-type {
+  color: var(--mm-hl-function);
+}
+
+.preview .hljs-attr,
+.preview .hljs-attribute,
+.preview .hljs-property,
+.preview .hljs-params {
+  color: var(--mm-hl-attr);
+}
+
+.preview .hljs-tag,
+.preview .hljs-selector-id,
+.preview .hljs-selector-class,
+.preview .hljs-selector-pseudo {
+  color: var(--mm-hl-tag);
+}
+
+.preview .hljs-emphasis {
+  font-style: italic;
+}
+
+.preview .hljs-strong {
+  font-weight: var(--mm-weight-bold);
+}
+
+/* --------------------------------------------------------------------------
+   表格
+   -------------------------------------------------------------------------- */
+.preview .table-wrap {
+  overflow-x: auto;
+  margin: 0 0 var(--mm-sp-4);
+}
+
+.preview table {
+  border-collapse: collapse;
+  font-family: var(--mm-font-ui);
+  font-size: 0.92em;
+  width: 100%;
+}
+
+.preview th,
+.preview td {
+  border: 1px solid var(--mm-border);
+  padding: var(--mm-sp-2) var(--mm-sp-3);
+  text-align: left;
+}
+
+.preview th {
+  background: var(--mm-surface-2);
+  font-weight: var(--mm-weight-bold);
+}
+
+.preview tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--mm-surface-2) 45%, transparent);
+}
+
+/* --------------------------------------------------------------------------
+   图片
+   -------------------------------------------------------------------------- */
+.preview img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--mm-radius-md);
+  margin: var(--mm-sp-2) 0;
+}
+
+/* --------------------------------------------------------------------------
+   数学公式
+   -------------------------------------------------------------------------- */
+.preview .katex {
+  font-size: 1.05em;
+}
+
+.preview .katex-display {
+  margin: var(--mm-sp-4) 0;
+  padding: var(--mm-sp-1) 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* 公式渲染失败时的降级显示（原样展示 TeX 源码） */
+.preview .mm-math-error {
+  font-family: var(--mm-font-mono);
+  font-size: 0.85em;
+  color: var(--mm-danger);
+  background: var(--mm-danger-weak);
+  border-radius: 3px;
+  padding: 0.1em 0.4em;
+}
+
+/* --------------------------------------------------------------------------
+   空状态
+   -------------------------------------------------------------------------- */
+.preview-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mm-sp-2);
+  height: 100%;
+  color: var(--mm-text-3);
+  font-family: var(--mm-font-ui);
+  font-size: var(--mm-fs-ui);
+  user-select: none;
+}
+
+.preview-empty kbd {
+  font-family: var(--mm-font-mono);
+  font-size: 11px;
+  padding: 1px 5px;
+  border: 1px solid var(--mm-border-strong);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+  background: var(--mm-surface-2);
+  color: var(--mm-text-2);
+}
+
+/* --------------------------------------------------------------------------
+   打印 / 导出 PDF
+   思路：隐藏除预览区以外的一切，强制浅色，放开高度限制让浏览器分页。
+   -------------------------------------------------------------------------- */
+@media print {
+  .app {
+    display: block;
+    height: auto;
+  }
+
+  .topbar,
+  .sidebar,
+  .splitter,
+  .statusbar,
+  .editor-toolbar,
+  .pane--edit,
+  .toast-host,
+  .overlay {
+    display: none !important;
+  }
+
+  .body,
+  .workspace,
+  .pane--preview,
+  .preview-scroll {
+    display: block !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  .preview {
+    max-width: none;
+    padding: 0;
+    font-size: 11.5pt;
+    line-height: 1.65;
+    color: #000;
+  }
+
+  .preview a {
+    color: #000;
+    border-bottom: none;
+    text-decoration: underline;
+  }
+
+  .preview pre,
+  .preview blockquote,
+  .preview table,
+  .preview img,
+  .preview .katex-display,
+  .preview h1,
+  .preview h2,
+  .preview h3 {
+    /* 避免标题或代码块被分页切断 */
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .preview h1,
+  .preview h2,
+  .preview h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  .preview pre {
+    border: 1px solid #ccc;
+    background: #fafafa;
+  }
+
+  /* 打印时把页脚链接暴露出来 */
+  .preview a[href^='http']::after {
+    content: ' (' attr(href) ')';
+    font-size: 0.85em;
+    color: #555;
+  }
+}

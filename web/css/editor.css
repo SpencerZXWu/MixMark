@@ -1,0 +1,878 @@
+/* ==========================================================================
+   MixMark · 编辑器
+   --------------------------------------------------------------------------
+   CodeMirror 6 外观定制 + 上方工具栏。
+   编辑器部分的规则用 #editor-host 作用域限定，以便在与 CM 注入的内联主题
+   样式竞争时拥有更高优先级（避免 !important 满天飞）。
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   工具栏
+
+   合并同类功能后从 17 个按钮缩到 10 个入口。toolbar 保持 overflow: visible ——
+   下拉区块要能探出容器；窄的时候靠 flex-wrap 折行，而不是横向滚动
+   （滚动容器会把绝对定位的下拉裁掉）。
+   -------------------------------------------------------------------------- */
+.editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1px;
+  flex: 0 0 auto;
+  padding: var(--mm-sp-1) var(--mm-sp-2);
+  border-bottom: 1px solid var(--mm-border);
+  overflow: visible;
+  position: relative;
+  z-index: 5;
+  user-select: none;
+
+  /* 工具栏上的图标（fx、</>、{ } …）大多短小且成对，
+     编程字体的连字会把它们合成意外字形（fx 就可能被渲染得形似 ∫），
+     关掉最省心。 */
+  font-variant-ligatures: none;
+}
+
+.editor-toolbar__sep {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 16px;
+  margin: 0 5px;
+  background: var(--mm-border);
+}
+
+.editor-toolbar__btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 7px;
+  border-radius: var(--mm-radius-sm);
+  font-size: var(--mm-fs-sm);
+  font-weight: var(--mm-weight-medium);
+  line-height: 1;
+  color: var(--mm-text-2);
+  transition: background var(--mm-dur-fast) var(--mm-ease),
+    color var(--mm-dur-fast) var(--mm-ease);
+}
+
+.editor-toolbar__btn:hover {
+  background: var(--mm-surface-2);
+  color: var(--mm-text-1);
+}
+
+.editor-toolbar__btn:active {
+  background: var(--mm-accent-weak);
+  color: var(--mm-accent);
+}
+
+.editor-toolbar__btn svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 标签的呈现细节：让 B / I / S 一眼看出是什么 */
+.editor-toolbar__btn[data-variant='bold'] {
+  font-weight: var(--mm-weight-bold);
+}
+.editor-toolbar__btn[data-variant='italic'] {
+  font-style: italic;
+  font-family: var(--mm-font-text);
+}
+.editor-toolbar__btn[data-variant='strike'] {
+  text-decoration: line-through;
+}
+.editor-toolbar__btn[data-variant='mono'] {
+  font-family: var(--mm-font-mono);
+  font-size: 11.5px;
+}
+
+/* --------------------------------------------------------------------------
+   分组按钮与下拉区块
+   -------------------------------------------------------------------------- */
+.tb-group {
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-flex;
+}
+
+.tb-trigger {
+  padding-right: 3px;
+}
+
+.tb-trigger__label {
+  font-family: var(--mm-font-mono);
+  font-size: 11.5px;
+}
+
+.tb-caret {
+  width: 11px;
+  height: 11px;
+  opacity: 0.5;
+  transition: transform var(--mm-dur-fast) var(--mm-ease);
+}
+
+.tb-group:hover .tb-caret,
+.tb-group.is-open .tb-caret {
+  opacity: 1;
+}
+
+.tb-group.is-open .tb-caret {
+  transform: rotate(180deg);
+}
+
+.tb-group:hover .tb-trigger,
+.tb-group.is-open .tb-trigger {
+  background: var(--mm-surface-2);
+  color: var(--mm-text-1);
+}
+
+.tb-group.is-open .tb-trigger {
+  background: var(--mm-accent-weak);
+  color: var(--mm-accent);
+}
+
+/* 横向选项区 */
+.tb-flyout {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 40;
+  display: flex;
+
+  /* 关键：显式按内容撑宽。
+     绝对定位元素在 width:auto 时用的是 shrink-to-fit，而它的可用宽度
+     是按包含块算的 —— 包含块是 .tb-group，只有 30 来像素宽，
+     结果整个下滑区会被压成一列竖排。用 max-content 绕开这个陷阱。 */
+  width: max-content;
+
+  /* 极窄窗口下才折行，正常情况下是一排横向选项 */
+  flex-wrap: wrap;
+  gap: 2px;
+  max-width: calc(100vw - 40px);
+  padding: 4px;
+  background: var(--mm-surface);
+  border: 1px solid var(--mm-border-strong);
+  border-radius: var(--mm-radius-md);
+  box-shadow: var(--mm-shadow-md);
+
+  /* 用 visibility 而不是 display:none —— 未展开时也能量出尺寸，
+     这样可以在展开前就把左右对齐方向定好，不会先展开再跳一下 */
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  transition: opacity var(--mm-dur-fast) var(--mm-ease),
+    transform var(--mm-dur-fast) var(--mm-ease),
+    visibility var(--mm-dur-fast);
+}
+
+/* 补一块透明区域跨过 4px 间隙，否则鼠标移向选项区的途中会掉出 hover */
+.tb-flyout::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -6px;
+  height: 6px;
+}
+
+.tb-group:hover .tb-flyout,
+.tb-group.is-open .tb-flyout {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+}
+
+/* 选完一个符号后收起面板。
+   光去掉 is-open 不够 —— 面板是靠 :hover 展开的，鼠标还悬在上面时
+   上面的规则照样生效。所以再打一个「本次悬停已经收起」的标记把它压下去，
+   鼠标离开分组后由脚本清掉，下次悬停照常展开。 */
+.tb-group.is-dismissed .tb-flyout {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* 靠近右边界时改为右对齐 */
+.tb-group.is-flipped .tb-flyout {
+  left: auto;
+  right: 0;
+}
+
+.tb-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 9px 0 7px;
+  border-radius: var(--mm-radius-sm);
+  font-size: var(--mm-fs-sm);
+  color: var(--mm-text-2);
+  white-space: nowrap;
+  transition: background var(--mm-dur-fast) var(--mm-ease),
+    color var(--mm-dur-fast) var(--mm-ease);
+}
+
+.tb-item:hover {
+  background: var(--mm-accent-weak);
+  color: var(--mm-accent);
+}
+
+.tb-item__glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  font-family: var(--mm-font-mono);
+  font-size: 11.5px;
+  font-weight: var(--mm-weight-medium);
+  color: var(--mm-text-1);
+}
+
+.tb-item:hover .tb-item__glyph {
+  color: var(--mm-accent);
+}
+
+.tb-item__glyph svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tb-item__label {
+  font-family: var(--mm-font-ui);
+}
+
+.tb-item[data-variant='bold'] .tb-item__glyph {
+  font-weight: var(--mm-weight-bold);
+}
+.tb-item[data-variant='italic'] .tb-item__glyph {
+  font-style: italic;
+}
+.tb-item[data-variant='mono'] .tb-item__glyph {
+  font-family: var(--mm-font-mono);
+}
+
+/* --------------------------------------------------------------------------
+   公式符号面板
+
+   它是 .tb-flyout 的一个变体：开合、钉住、外点关闭全部沿用，
+   只把「一排横条」换成「分类标签 + 可滚动的符号网格」。
+   -------------------------------------------------------------------------- */
+.tb-flyout--panel {
+  /* 符号很多，必须定宽 + 内部滚动，不能按内容撑宽。
+     这里是兼底值，实际宽度由 symbol-panel.js 按编辑区实测写入内联样式 ——
+     面板比触发按钮宽得多，而包含块只有几十像素，纯 CSS 定位在窄窗口下
+     会把它甩到屏幕外面。 */
+  display: block;
+  width: min(560px, calc(100vw - 32px));
+  padding: 0;
+}
+
+.sympanel__tabs {
+  display: flex;
+  gap: 2px;
+  padding: var(--mm-sp-1);
+  border-bottom: 1px solid var(--mm-border);
+  background: var(--mm-bg-sub);
+}
+
+.sympanel__tab {
+  padding: 4px var(--mm-sp-2);
+  border-radius: var(--mm-radius-sm);
+  font-size: var(--mm-fs-sm);
+  color: var(--mm-text-2);
+  white-space: nowrap;
+  transition: background var(--mm-dur-fast) var(--mm-ease),
+    color var(--mm-dur-fast) var(--mm-ease);
+}
+
+.sympanel__tab:hover {
+  background: var(--mm-surface-2);
+  color: var(--mm-text-1);
+}
+
+.sympanel__tab.is-active {
+  background: var(--mm-surface);
+  color: var(--mm-accent);
+  font-weight: var(--mm-weight-medium);
+}
+
+/* 面板自身滚动：符号多，但不该把下拉区撑得比屏幕还高 */
+.sympanel__body {
+  max-height: min(60vh, 420px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--mm-sp-2);
+}
+
+.sympanel__pane[hidden] {
+  display: none;
+}
+
+.sympanel__section + .sympanel__section {
+  margin-top: var(--mm-sp-3);
+}
+
+.sympanel__section-title {
+  margin-bottom: var(--mm-sp-1);
+  font-size: 11px;
+  color: var(--mm-text-3);
+  letter-spacing: 0.03em;
+}
+
+.sympanel__grid {
+  display: grid;
+  /* 固定列宽而不是 auto-fill 等分：公式宽窄差别很大，
+     等分会把 \alpha 拉成和矩阵一样宽，很难扫视 */
+  grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
+  gap: 2px;
+}
+
+.symchip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 3px 4px;
+  border-radius: var(--mm-radius-sm);
+  color: var(--mm-text-1);
+  font-size: 13px;
+  overflow: hidden;
+  transition: background var(--mm-dur-fast) var(--mm-ease),
+    color var(--mm-dur-fast) var(--mm-ease);
+}
+
+.symchip:hover,
+.symchip:focus-visible {
+  background: var(--mm-accent-weak);
+  color: var(--mm-accent);
+}
+
+/* 矩阵、分段函数这类高个子：允许它自己占高，别压扁 */
+.symchip .katex {
+  font-size: 1em;
+  white-space: nowrap;
+}
+
+.symchip--raw {
+  font-family: var(--mm-font-mono);
+  font-size: 10px;
+  line-height: 1.2;
+  word-break: break-all;
+}
+
+/* 语言符号是正文字符而不是公式：用界面字体、字号大一点，看着才像字 */
+.symchip--text {
+  font-family: var(--mm-font-ui);
+  font-size: 15px;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   公式命令补全
+
+   在 $...$ 里敲 \ 之后贴在光标下方的候选框。
+   用 fixed 定位、挂在 body 上：位置按视口坐标算最省事，
+   也不会被 .cm-scroller 这个滚动容器裁掉。
+   -------------------------------------------------------------------------- */
+.acbox {
+  position: fixed;
+  z-index: 240;
+  max-height: 264px;
+  overflow: auto;
+  padding: 4px;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-md);
+  background: var(--mm-surface);
+  box-shadow: var(--mm-shadow-lg);
+}
+
+/* 定位元素也要能把 hidden 真正生效（UA 的 [hidden] 优先级很低） */
+.acbox[hidden] {
+  display: none;
+}
+
+.acbox__item {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 5px 8px;
+  border-radius: var(--mm-radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.acbox__item.is-active {
+  background: var(--mm-selection);
+}
+
+.acbox__name {
+  font-family: var(--mm-font-mono);
+  font-size: var(--mm-fs-sm);
+  color: var(--mm-text-1);
+}
+
+.acbox__tpl {
+  font-family: var(--mm-font-mono);
+  font-size: var(--mm-fs-sm);
+  color: var(--mm-text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --------------------------------------------------------------------------
+   编辑器标签页
+
+   高度与左侧「文档 / 大纲 / 搜索」标签行严格一致：两者都紧贴顶栏下沿，
+   高度相同即底边对齐，视觉上成为一条贯穿的横带。
+   注意用 inset box-shadow 而不是 border-bottom 画底边 —— 边框会把行高
+   顶多 1px，那就对不齐了。
+   -------------------------------------------------------------------------- */
+.etabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  /* 高度写死并与侧栏标签行一致：两者都紧贴顶栏下沿，
+     等高才连成一条贯穿的横带。标签本身 30px、上下各留 5px */
+  height: 40px;
+  box-sizing: border-box;
+  padding: 0 var(--mm-sp-2);
+  background: var(--mm-bg-sub);
+  box-shadow: inset 0 -1px 0 var(--mm-border);
+  overflow-x: auto;
+  scrollbar-width: none;
+  user-select: none;
+}
+
+.etabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* 四条边都圆，跟界面里其它圆角块一致。
+   以前只圆上两角（像浏览器标签那样贴着底边），但这条工具栏不是浏览器
+   的标签栏，底座是浮起来的，圆上不圆下反而露出两个直角 */
+.etab {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+  height: 30px;
+  max-width: 180px;
+  padding: 0 6px 0 var(--mm-sp-3);
+  border-radius: var(--mm-radius-md);
+  font-size: var(--mm-fs-sm);
+  color: var(--mm-text-2);
+  transition: background var(--mm-dur-fast) var(--mm-ease),
+    color var(--mm-dur-fast) var(--mm-ease),
+    /* 拖动换位时的补间（FLIP 靠它滑到位，不是瞬移） */
+    transform var(--mm-dur) var(--mm-ease);
+}
+
+.etab:hover {
+  background: var(--mm-surface-2);
+  color: var(--mm-text-1);
+}
+
+.etab.is-active {
+  background: var(--mm-bg);
+  color: var(--mm-text-1);
+  font-weight: var(--mm-weight-medium);
+}
+
+/* 被拖起来的那条：淡一点，一眼看出「它在动」 */
+.etab.is-dragging {
+  opacity: 0.55;
+}
+
+.etab__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.etab__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--mm-radius-sm);
+  color: var(--mm-text-3);
+  /* 平时藏起来：标签上最常做的是「切过去」，不是「关掉」 */
+  opacity: 0;
+  transition: opacity var(--mm-dur-fast) var(--mm-ease),
+    background var(--mm-dur-fast) var(--mm-ease),
+    color var(--mm-dur-fast) var(--mm-ease);
+}
+
+.etab:hover .etab__close,
+.etab.is-active .etab__close,
+.etab__close:focus-visible {
+  opacity: 1;
+}
+
+.etab__close:hover {
+  background: var(--mm-bg-sunken);
+  color: var(--mm-text-1);
+}
+
+.etab__close svg {
+  width: 11px;
+  height: 11px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+
+/* --------------------------------------------------------------------------
+   编辑器容器
+   -------------------------------------------------------------------------- */
+#editor-host {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--mm-bg);
+}
+
+#editor-host .cm-editor {
+  height: 100%;
+  background: transparent;
+  color: var(--mm-text-1);
+  font-family: var(--mm-font-mono);
+  font-size: var(--mm-fs-editor);
+}
+
+#editor-host .cm-editor.cm-focused {
+  /* 编辑区不画焦点环，光标本身已是焦点指示 */
+  outline: none;
+}
+
+#editor-host .cm-scroller {
+  font-family: inherit;
+  line-height: var(--mm-lh-normal);
+  padding: var(--mm-sp-5) 0 45vh; /* 底部留白：让最后一段也能滚到屏幕上方 */
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+#editor-host .cm-content {
+  /* 正文铺满整个编辑区：不设 max-width，也不加 auto 外边距。
+     阅读栏宽（--mm-measure）只作用于预览区 —— 那里是「读」的地方，
+     需要控制行宽；编辑区是「写」的地方，铺满、从左侧起更好用。
+     左右内边距取 16px：够透气，又不会让正文离左边缘太远。 */
+  padding: 0 var(--mm-sp-4);
+  caret-color: var(--mm-accent);
+  min-height: 100%;
+}
+
+#editor-host .cm-line {
+  padding: 0;
+}
+
+/* --------------------------------------------------------------------------
+   行号
+
+   行号栏固定在编辑区最左边，正文紧跟其后。
+   这里刻意**不做**居中：曾经试过给正文限宽 + 居中做「阅读栏」，
+   结果宽屏下正文被推到中间、行号栏被留在最左边，两者间空出一大段，
+   看起来像排版错乱。编辑区铺满、从左侧开始才是符合直觉的做法。
+   -------------------------------------------------------------------------- */
+#editor-host .cm-gutters {
+  background: transparent;
+  border: none;
+  color: var(--mm-text-3);
+  font-size: 12px;
+  font-family: var(--mm-font-mono);
+  user-select: none;
+}
+
+#editor-host .cm-lineNumbers .cm-gutterElement {
+  padding: 0 var(--mm-sp-3) 0 var(--mm-sp-2);
+  min-width: 32px;
+}
+
+#editor-host .cm-activeLineGutter {
+  background: transparent;
+  color: var(--mm-text-1);
+  font-weight: var(--mm-weight-medium);
+}
+
+/* --------------------------------------------------------------------------
+   行引用复选框（行号左边那一条窄槽）
+
+   默认整条槽是空的，鼠标移到某一行附近才浮现 —— 常驻会变成一排小方块，
+   把「左边是干净的纸张」这件事毁掉。已勾选的那些例外，永久可见。
+
+   槽本身留 14px：够放一个 12px 的复选框，又不至于把正文推得太远。
+   -------------------------------------------------------------------------- */
+#editor-host .mm-linesel-gutter {
+  min-width: 14px;
+}
+
+#editor-host .mm-linesel-gutter .cm-gutterElement {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0 0 4px;
+}
+
+/*
+   自己画复选框，不用浏览器默认的那个。
+   默认控件是系统主题的（圆角、勾、配色都是操作系统的），放在这套配色里
+   像一个外来的零件；appearance:none 之后边框、圆角、勾线全走令牌，
+   换主题时它跟着变 —— 这也是用户说的「风格不符合 app 风格和主题」。
+*/
+.mm-linesel {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  width: 12px;
+  height: 12px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--mm-border-strong);
+  border-radius: var(--mm-radius-sm);
+  background: var(--mm-surface);
+  cursor: pointer;
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mm-linesel {
+    transition: opacity var(--mm-dur-fast) var(--mm-ease),
+      background var(--mm-dur-fast) var(--mm-ease),
+      border-color var(--mm-dur-fast) var(--mm-ease);
+  }
+}
+
+.mm-linesel:hover {
+  border-color: var(--mm-accent);
+}
+
+.mm-linesel:focus-visible {
+  outline: 2px solid var(--mm-accent-ring);
+  outline-offset: 1px;
+}
+
+.mm-linesel:checked {
+  background: var(--mm-accent);
+  border-color: var(--mm-accent);
+}
+
+/* 勾线用反白色：深底主题里 --mm-text-inv 是深的，浅强调色上照样看得见 */
+.mm-linesel:checked::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 0.5px;
+  width: 3px;
+  height: 6px;
+  border: solid var(--mm-text-inv);
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
+
+/*
+   浮现范围：本行 + 上下各一行，而不是整列一起亮。
+   整列同时冒出几十个方块，看着像界面出了毛病；只亮三行则明确地指出
+   「你正在这一行上」。用 :has() 选上一个兄弟 —— 现代 Chrome 都支持。
+   勾选过的那些不受影响，随时看得见。
+*/
+#editor-host .mm-linesel-gutter .cm-gutterElement:hover .mm-linesel,
+#editor-host .mm-linesel-gutter .cm-gutterElement:hover + .cm-gutterElement .mm-linesel,
+#editor-host .mm-linesel-gutter .cm-gutterElement:has(+ .cm-gutterElement:hover) .mm-linesel,
+.mm-linesel.is-checked,
+.mm-linesel:focus {
+  opacity: 1;
+}
+
+/* --------------------------------------------------------------------------
+   光标 / 选区 / 当前行
+
+   CodeMirror 的选区是用一个独立的背景层画的（.cm-selectionBackground），
+   它的基础样式来自 CM 注入的内联主题，所以这里必须用 #editor-host 提升优先级。
+   -------------------------------------------------------------------------- */
+#editor-host .cm-cursor,
+#editor-host .cm-dropCursor {
+  border-left: 2px solid var(--mm-accent);
+  margin-left: -1px;
+}
+
+#editor-host .cm-content ::selection {
+  background: var(--mm-selection);
+}
+
+/* 未聚焦时也保持同样的浓度：
+   否则切到预览区一看，编辑器里的选区就“白”了，不好判断选中范围 */
+#editor-host .cm-selectionBackground,
+#editor-host .cm-editor.cm-focused .cm-selectionBackground,
+#editor-host .cm-editor .cm-selectionBackground {
+  background: var(--mm-selection);
+}
+
+#editor-host .cm-activeLine {
+  /* 极淡的行底纹，帮助定位但不干扰阅读 */
+  background: color-mix(in srgb, var(--mm-surface-2) 55%, transparent);
+}
+
+/* 选中某个词时，文中其它相同词的位置 */
+#editor-host .cm-selectionMatch {
+  background: var(--mm-selection-strong);
+  border-radius: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   搜索面板
+   -------------------------------------------------------------------------- */
+#editor-host .cm-panels {
+  background: var(--mm-bg-sub);
+  color: var(--mm-text-1);
+  border-bottom: 1px solid var(--mm-border);
+}
+
+#editor-host .cm-panel.cm-search {
+  font-family: var(--mm-font-ui);
+  font-size: var(--mm-fs-sm);
+  padding: var(--mm-sp-2) var(--mm-sp-3);
+}
+
+#editor-host .cm-panel.cm-search input,
+#editor-host .cm-panel.cm-search button {
+  font-size: var(--mm-fs-sm);
+  color: var(--mm-text-1);
+}
+
+#editor-host .cm-panel.cm-search input {
+  background: var(--mm-bg);
+  border: 1px solid var(--mm-border-strong);
+  border-radius: var(--mm-radius-sm);
+  padding: 3px 6px;
+}
+
+#editor-host .cm-panel.cm-search label {
+  color: var(--mm-text-2);
+}
+
+#editor-host .cm-panel.cm-search button {
+  padding: 3px 8px;
+  border-radius: var(--mm-radius-sm);
+  background: var(--mm-surface-2);
+}
+
+#editor-host .cm-panel.cm-search button:hover {
+  background: var(--mm-accent-weak);
+  color: var(--mm-accent);
+}
+
+#editor-host .cm-searchMatch {
+  background: color-mix(in srgb, var(--mm-warn) 28%, transparent);
+  border-radius: 2px;
+}
+
+#editor-host .cm-searchMatch.cm-searchMatch-selected {
+  background: color-mix(in srgb, var(--mm-accent) 35%, transparent);
+}
+
+/* --------------------------------------------------------------------------
+   自动补全（basicSetup 自带，外观纳入统一风格）
+   -------------------------------------------------------------------------- */
+#editor-host .cm-tooltip {
+  background: var(--mm-surface);
+  border: 1px solid var(--mm-border-strong);
+  border-radius: var(--mm-radius-md);
+  box-shadow: var(--mm-shadow-md);
+  overflow: hidden;
+}
+
+#editor-host .cm-tooltip-autocomplete ul li {
+  font-family: var(--mm-font-ui);
+  font-size: var(--mm-fs-sm);
+  padding: 3px 8px;
+  color: var(--mm-text-1);
+}
+
+#editor-host .cm-tooltip-autocomplete ul li[aria-selected] {
+  background: var(--mm-accent-weak);
+  color: var(--mm-accent);
+}
+
+/* --------------------------------------------------------------------------
+   语法高亮
+   -------------------------------------------------------------------------- */
+#editor-host .mm-syn-heading {
+  color: var(--mm-syn-heading);
+  font-weight: var(--mm-weight-bold);
+}
+
+#editor-host .mm-syn-strong {
+  color: var(--mm-syn-strong);
+  font-weight: var(--mm-weight-bold);
+}
+
+#editor-host .mm-syn-em {
+  color: var(--mm-syn-em);
+  font-style: italic;
+}
+
+#editor-host .mm-syn-strike {
+  color: var(--mm-text-3);
+  text-decoration: line-through;
+}
+
+#editor-host .mm-syn-link {
+  color: var(--mm-syn-link);
+}
+
+#editor-host .mm-syn-url {
+  color: var(--mm-syn-url);
+  text-decoration: underline;
+  text-decoration-color: var(--mm-border-strong);
+}
+
+#editor-host .mm-syn-marker {
+  color: var(--mm-syn-marker);
+}
+
+#editor-host .mm-syn-quote {
+  color: var(--mm-syn-quote);
+  font-style: italic;
+}
+
+#editor-host .mm-syn-code {
+  color: var(--mm-syn-code);
+  background: var(--mm-syn-code-bg);
+  border-radius: 3px;
+  padding: 1px 1px;
+}
+
+#editor-host .mm-syn-hr {
+  color: var(--mm-syn-hr);
+  font-weight: var(--mm-weight-bold);
+}
+
+#editor-host .mm-syn-math {
+  color: var(--mm-syn-code);
+}

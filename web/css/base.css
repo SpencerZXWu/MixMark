@@ -1,0 +1,160 @@
+/* ==========================================================================
+   MixMark · 基础层
+   --------------------------------------------------------------------------
+   重置 + 排版基线 + 滚动条 + 焦点环。不涉及具体组件。
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+html {
+  /* 避免侧栏折叠时页面抖动 */
+  overflow: hidden;
+}
+
+body {
+  background: var(--mm-bg);
+  color: var(--mm-text-1);
+  font-family: var(--mm-font-ui);
+  font-size: var(--mm-fs-ui);
+  line-height: var(--mm-lh-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   焦点可见性：只在键盘操作时显示焦点环，鼠标点击不显示
+   -------------------------------------------------------------------------- */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--mm-accent);
+  outline-offset: 1px;
+  border-radius: var(--mm-radius-sm);
+}
+
+/* --------------------------------------------------------------------------
+   滚动条：默认极细且半透明，悬停时加深，尽量减少视觉干扰
+   -------------------------------------------------------------------------- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--mm-border-strong) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--mm-border-strong) 70%, transparent);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: var(--mm-radius-pill);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--mm-border-strong);
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* --------------------------------------------------------------------------
+   表单元素统一继承字体
+   -------------------------------------------------------------------------- */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+input,
+textarea {
+  background: var(--mm-bg);
+  border: 1px solid var(--mm-border-strong);
+  border-radius: var(--mm-radius-sm);
+  padding: 6px 8px;
+  color: var(--mm-text-1);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--mm-text-3);
+}
+
+input:focus,
+textarea:focus {
+  border-color: var(--mm-accent);
+}
+
+/* --------------------------------------------------------------------------
+   选择文本
+   -------------------------------------------------------------------------- */
+::selection {
+  background: var(--mm-selection);
+}
+
+/* --------------------------------------------------------------------------
+   工具类
+   -------------------------------------------------------------------------- */
+[hidden] {
+  display: none !important;
+}
+
+.mm-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --------------------------------------------------------------------------
+   打印：默认隐藏整个应用，仅 preview.css 里声明要打印的部分会显示
+   -------------------------------------------------------------------------- */
+@media print {
+  html,
+  body {
+    overflow: visible;
+    height: auto;
+    background: #fff;
+  }
+}
