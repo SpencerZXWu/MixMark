@@ -280,34 +280,36 @@
      工具栏上以前没有图表的入口 —— 想画个 UML 得自己敲 ```mermaid，
      而 mermaid 这个词本身就不像「用户会知道的东西」。
 
-     两条命令分开摆：
-       - 插入：往光标处放一张空白类图（列成员这一步空着，让人自己填）
-       - 编辑：直接在预览里点图也行，这条给「从工具栏进」留的路
+     更早的版本只有一个「插入图表」按钮，插出来的永远是类图。图表种类
+     差别很大（类图 / 流程图 / 时序图 / 状态图 / ER 图），先问一句
+     「要哪种」比插完再让用户改掉强。所以拆成五条命令，靠 toolbar.group
+     合并成一个下拉 —— 分组、开合、键盘收起都由外壳统一提供。
      ------------------------------------------------------------------ */
 
-  fmt(
-    'diagram',
-    'fmtDiagram',
-    '◇',
-    function () {
-      var starter = [
-        'classDiagram',
-        '  class NewClass {',
-        '    +String field',
-        '    +method()',
-        '  }'
-      ].join('\n');
+  MM.commands.registerGroup('diagram', { label: '◇', titleKey: 'tbDiagram' });
 
-      MM.editor.insertBlock('```mermaid\n' + starter + '\n```');
+  /* 下拉项的文案直接复用图表面板那几个 key（类图 / 流程图 / …），
+     不再为同一件事起第二套名字。order 必须落在同一个十位区间，
+     否则会被外壳拆成两个下拉按钮。 */
+  var DIAGRAM_COMMANDS = [
+    { kind: 'classDiagram', titleKey: 'diagramTypeClass', order: 42 },
+    { kind: 'flowchart', titleKey: 'diagramTypeFlow', order: 43 },
+    { kind: 'sequenceDiagram', titleKey: 'diagramTypeSequence', order: 44 },
+    { kind: 'stateDiagram', titleKey: 'diagramTypeState', order: 45 },
+    { kind: 'erDiagram', titleKey: 'diagramTypeEr', order: 46 }
+  ];
 
-      // 图表是异步渲染出来的（mermaid 按需加载），等它画完再开面板。
-      // 点「插入」就盼着能马上改名字，多等 300ms 比多按一次鼠标强。
-      setTimeout(function () {
-        MM.diagramPanel.openNearest(null);
-      }, 320);
-    },
-    { order: 42 }
-  );
+  DIAGRAM_COMMANDS.forEach(function (item) {
+    fmt(
+      'diagram-' + item.kind,
+      item.titleKey,
+      '◇',
+      function () {
+        MM.diagramPanel.insertNew(item.kind);
+      },
+      { order: item.order, group: 'diagram' }
+    );
+  });
 
   MM.commands.register({
     id: 'format.editDiagram',

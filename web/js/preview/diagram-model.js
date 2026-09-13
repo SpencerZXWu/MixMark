@@ -829,9 +829,71 @@
     return '';
   }
 
+  /* ------------------------------------------------------------------
+     新建图表用的初始骨架
+
+     工具栏与预览功能栏共用这一份 —— 两处各写一份必然会跑偏。
+     标识符用英文是图表圈的惯例（节点名、类名本来就习惯这么写），
+     而它们不是界面文案，所以不进 i18n。
+     ------------------------------------------------------------------ */
+
+  var TEMPLATES = {
+    classDiagram: [
+      'classDiagram',
+      '  class ClassA {',
+      '    +String field',
+      '    +method()',
+      '  }',
+      '  class ClassB',
+      '  ClassA "1" --> "*" ClassB : has'
+    ].join('\n'),
+
+    flowchart: [
+      'flowchart TD',
+      '  A[Start] --> B{Check}',
+      '  B -->|Yes| C[Done]',
+      '  B -->|No| D[Retry]'
+    ].join('\n'),
+
+    sequenceDiagram: [
+      'sequenceDiagram',
+      '  participant A as Alice',
+      '  participant B as Bob',
+      '  A->>B: Request',
+      '  B-->>A: Response'
+    ].join('\n'),
+
+    stateDiagram: [
+      'stateDiagram-v2',
+      '  [*] --> Idle',
+      '  Idle --> Running : start',
+      '  Running --> [*]'
+    ].join('\n'),
+
+    erDiagram: [
+      'erDiagram',
+      '  CUSTOMER ||--o{ ORDER : places',
+      '  CUSTOMER {',
+      '    string name',
+      '  }',
+      '  ORDER {',
+      '    int id',
+      '  }'
+    ].join('\n')
+  };
+
+  /** 新建时可选的那几种（顺序就是面板/菜单里的顺序） */
+  var NEW_TYPES = ['classDiagram', 'flowchart', 'sequenceDiagram', 'stateDiagram', 'erDiagram'];
+
+  function template(kind) {
+    return TEMPLATES[kind] || TEMPLATES.classDiagram;
+  }
+
   MM.diagram = {
     KIND: KIND,
     SHAPES: SHAPES,
+    NEW_TYPES: NEW_TYPES,
+    template: template,
     parse: parse,
     serialize: serialize,
     detectType: detectType,

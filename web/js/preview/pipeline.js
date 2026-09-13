@@ -444,6 +444,44 @@
   var mermaidTheme = null;
 
   /**
+   * mermaid 的渲染队列。
+   *
+   * `mermaid.render()` **不是可重入的** —— 它要往 body 里插一个临时容器、
+   * 量完文字宽度再搬走。两个渲染叠在一起时两边会抢那套全局状态，结果是
+   * 双双卡死：promise 既不 resolve 也不 reject，临时容器永远留在 body 里，
+   * 而图表块退回原始代码。
+   *
+   * 反向修改里编辑图表时重渲染得很频，这条路子是必踩的。所以把每次渲染
+   * 串起来，一次只跑一个。
+   */
+  var mermaidQueue = Promise.resolve();
+
+  function renderOneDiagram(id, code) {
+    function run() {
+      return window.mermaid.render(id, code);
+    }
+    var next = mermaidQueue.then(run, run);
+    // 队列自己不能被一次失败打断，否则后面排队的全部跟着挂掉
+    mermaidQueue = next.then(
+      function () {},
+      function () {}
+    );
+    return next;
+  }
+
+  /**
+   * 把某次渲染留下的临时容器清掉（失败时 mermaid 会留着不收）。
+   *
+   * 只认 `d<id>` 这一个。**不要**顺手再 getElementById(id) 兜一下 ——
+   * mermaid 会把同一个 id 也写在它生成的 `<svg>` 上，那个兜底会把刚插进
+   * 预览的图当场删掉，表现就是「容器在、里面空的」。
+   */
+  function dropMermaidStray(id) {
+    var stray = document.getElementById('d' + id);
+    if (stray && stray.parentNode && stray !== container) stray.parentNode.removeChild(stray);
+  }
+
+  /**
    * 「挂起」标记：反向修改期间不让渲染重建 DOM。
    *
    * 用户在预览里打字，每敲一下都会写回源码，而源码变化会触发重新渲染 ——
@@ -534,20 +572,21 @@
             var code = job.el.textContent;
             var id = 'mm-mermaid-' + token + '-' + job.index;
 
-            return window.mermaid
-              .render(id, code)
+            return renderOneDiagram(id, code)
               .then(function (res) {
-                if (token !== renderToken || !pre.isConnected) return;
+                if (token !== renderToken || !pre.isConnected) {
+                  // 已经不是当班的那一批了，把结果和可能的残留都丢掉
+                  dropMermaidStray(id);
+                  return;
+                }
                 var box = document.createElement('div');
                 box.className = 'mm-mermaid';
                 box.innerHTML = res.svg;
                 pre.parentNode.replaceChild(box, pre);
+                dropMermaidStray(id);
               })
               .catch(function (err) {
-                // mermaid 出错时会往 body 上挂一个 id 为 d<id> 的临时容器，
-                // 它不一定自己收干净 —— 留着会随着每次重渲染越积越多
-                var stray = document.getElementById('d' + id);
-                if (stray && stray.parentNode) stray.parentNode.removeChild(stray);
+                dropMermaidStray(id);
 
                 if (token !== renderToken || !pre.isConnected) return;
 
@@ -616,12 +655,22 @@
 
     var elapsed = performance.now() - started;
 
-    return {
+    var info = {
       elapsed: elapsed,
       slow: elapsed > SLOW_RENDER_MS,
       blockCount: result.blockCount,
       mathCount: result.mathCount
     };
+
+    /* 统一在这里发。
+     *
+     * 以前只在 schedule 里发，于是 renderImmediate 那条路径（解除挂起、
+     * 切文档、切主题）谁都不知道 DOM 换了 —— 行号索引不重建、反向修改也
+     * 没重新挂上 contenteditable，表现就是「重渲染之后预览区点不进去」。
+     * 凡是不走 schedule 的渲染都是这一类的受害者。 */
+    MM.bus.emit('preview:rendered', info);
+
+    return info;
   }
 
   /** 防抖渲染。编辑器每次敲键都会调用这里，所以必须便宜。 */
@@ -633,8 +682,7 @@
     if (renderTimer) clearTimeout(renderTimer);
     renderTimer = setTimeout(function () {
       renderTimer = null;
-      var info = renderNow(lastSrc);
-      MM.bus.emit('preview:rendered', info);
+      renderNow(lastSrc);
     }, 80);
   }
 

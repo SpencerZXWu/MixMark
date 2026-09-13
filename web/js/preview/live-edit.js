@@ -412,7 +412,8 @@
       });
       b.addEventListener('click', function (e) {
         e.preventDefault();
-        run();
+        // 把按钮本身递下去：图表种类弹层要贴在它下面
+        run(b);
       });
       extra.appendChild(b);
       return b;
@@ -422,8 +423,8 @@
       insertTask();
       flush();
     });
-    plain(MM.i18n.t('liveEditDiagram'), 'liveEditDiagramTitle', function () {
-      if (MM.diagramPanel) MM.diagramPanel.openNearest(active);
+    plain(MM.i18n.t('liveEditDiagram'), 'liveEditDiagramTitle', function (btn) {
+      if (MM.diagramPanel) MM.diagramPanel.openNearest(active, btn);
     });
 
     var spacer = document.createElement('span');
@@ -528,6 +529,17 @@
       clearTimeout(releaseTimer);
       releaseTimer = null;
     }
+
+    /* 兜底：确保这一块真的可编辑。
+       正常情况由 applyEditable() 在渲染后统一挂上，但只要有一条渲染路径
+       漏了通知（preview:rendered 曾经就漏过），点进去就一个字也打不了 ——
+       而且看起来很像「改了又变回去」。宁可每次点的时候多写两个属性。 */
+    if (!block.hasAttribute('contenteditable')) {
+      block.setAttribute('contenteditable', 'true');
+      block.setAttribute('spellcheck', 'false');
+      block.classList.remove('mm-block--diagram');
+    }
+
     if (block === active) return;
 
     // 换块之前先把上一块落地，否则它的改动会随 DOM 重建一起丢

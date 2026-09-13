@@ -24,6 +24,21 @@
   /** 当前编辑的对象 */
   var ctx = null; // { block, model, selected }
 
+  /**
+   * 文本输入的防抖句柄。
+   *
+   * 每敲一个字符就写源码 + 重渲染整片预览，视觉上就是一直闪；而且 mermaid
+   * 是异步的，重渲染期间图表会短暂退回原始代码块。所以文本框一律攒一下再提。
+   * 下拉框 / 增删这类「点一下就是一下」的操作不走防抖，立即生效。
+   */
+  var commitTimer = null;
+  var COMMIT_DEBOUNCE = 420;
+
+  /** 面板在分栏模式下挪到编辑区下半用，这几个是重新量位置的钩子 */
+  var repositionObserver = null;
+  /** 类型选择弹层 */
+  var picker = null;
+
   var TYPE_LABEL = {
     classDiagram: 'diagramTypeClass',
     flowchart: 'diagramTypeFlow',
@@ -112,6 +127,11 @@
 
   /** 预览里一次重渲染就够了：立刻看到改动的效果，面板自己不用重画 */
   function commit(opts) {
+    // 排队中的文本提交先落地，否则紧接着的结构改动会被它覆盖回去
+    if (commitTimer) {
+      clearTimeout(commitTimer);
+      commitTimer = null;
+    }
     if (!ctx) return;
 
     var source = MM.diagram.serialize(ctx.model);
@@ -137,6 +157,15 @@
     relink(delta);
 
     if (opts && opts.rebuild) renderPanel();
+  }
+
+  /** 文本框专用：攒一小段时间再提交，避免边敲边闪 */
+  function commitTyping() {
+    if (commitTimer) clearTimeout(commitTimer);
+    commitTimer = setTimeout(function () {
+      commitTimer = null;
+      commit();
+    }, COMMIT_DEBOUNCE);
   }
 
   /**
@@ -282,8 +311,7 @@
       textInput(selfName, function (v) {
         renameElement(model, item, v);
       })
-    );
-    top.appendChild(
+    );    top.appendChild(
       iconButton('×', 'diagramDelete', function () {
         removeElement(model, item);
       }, 'dg-btn--danger')
@@ -309,7 +337,7 @@
           'diagramText',
           textInput(item.label, function (v) {
             item.label = v;
-            commit();
+            commitTyping();
           })
         )
       );
@@ -322,7 +350,7 @@
           'diagramAnnotation',
           textInput(item.annotation, function (v) {
             item.annotation = v;
-            commit();
+            commitTyping();
           }, 'Interface')
         )
       );
@@ -333,7 +361,7 @@
             item.members = v.split('\n').filter(function (l) {
               return l.trim() !== '';
             });
-            commit();
+            commitTyping();
           }, 4)
         )
       );
@@ -346,7 +374,7 @@
           'diagramAlias',
           textInput(item.label, function (v) {
             item.label = v;
-            commit();
+            commitTyping();
           })
         )
       );
@@ -361,7 +389,7 @@
             item.attrs = v.split('\n').filter(function (l) {
               return l.trim() !== '';
             });
-            commit();
+            commitTyping();
           }, 4)
         )
       );
@@ -387,7 +415,7 @@
       if (it.toNode) it.toNode.id = it.to === next ? next : it.toNode.id;
     });
 
-    commit({ rebuild: false });
+    commitTyping();
   }
 
   function removeElement(model, item) {
@@ -536,7 +564,7 @@
         'diagramLabel',
         textInput(item.label, function (v) {
           item.label = v;
-          commit();
+          commitTyping();
         })
       )
     );
@@ -616,7 +644,7 @@
         'diagramText',
         textInput(item.text, function (v) {
           item.text = v;
-          commit();
+          commitTyping();
         })
       )
     );
@@ -681,7 +709,7 @@
         head.appendChild(
           textInput(item.target, function (v) {
             item.target = v;
-            commit();
+            commitTyping();
           }, t('diagramNoteTarget'))
         );
         head.appendChild(
@@ -698,7 +726,7 @@
             'diagramNoteText',
             textArea(item.text, function (v) {
               item.text = v;
-              commit();
+              commitTyping();
             }, 2)
           )
         );
@@ -709,7 +737,7 @@
           textInput(MM.diagram.serialize({ header: '', items: [item] }).replace(/^\n+/, ''), function (v) {
             item.raw = v;
             item.kind = MM.diagram.KIND.RAW;
-            commit();
+            commitTyping();
           })
         );
       }
@@ -758,12 +786,68 @@
     ensureBuilt();
     el.hidden = false;
     document.body.classList.add('dg-open');
+    positionPanel();
+    watchLayout();
   }
 
   function closePanel() {
     if (el) el.hidden = true;
     document.body.classList.remove('dg-open');
+    if (commitTimer) {
+      clearTimeout(commitTimer);
+      commitTimer = null;
+    }
     ctx = null;
+  }
+
+  /**
+   * 面板放哪儿。
+   *
+   * 分栏模式下预览只占右半边，而面板默认固定贴在窗口右边 —— 正好压在
+   * 图表上，一边改一边看不见改的是什么。所以那种情况把它挪到**编辑区
+   * 下半部**：上半留源码、下半改图表，两者都在眼前。
+   *
+   * 纯预览模式整屏都是预览，没有「编辑区」可言，就维持原来的贴右。
+   */
+  function positionPanel() {
+    if (!el || el.hidden) return;
+
+    var s = el.style;
+    var pane = document.querySelector('.pane--edit');
+    var split = MM.store.get().mode === 'split' && pane;
+
+    if (split) {
+      var r = pane.getBoundingClientRect();
+      if (r.width < 200) {
+        // 编辑区被折得太窄（窗口很小），贴右反而更好用
+        el.classList.remove('dg-panel--bottom');
+        s.left = s.width = s.top = s.height = '';
+        s.right = s.bottom = '0';
+        return;
+      }
+      el.classList.add('dg-panel--bottom');
+      s.left = r.left + 'px';
+      s.width = r.width + 'px';
+      s.top = r.top + r.height / 2 + 'px';
+      s.height = r.height / 2 + 'px';
+      s.right = 'auto';
+      s.bottom = 'auto';
+      return;
+    }
+
+    el.classList.remove('dg-panel--bottom');
+    s.left = s.width = s.top = s.height = '';
+    s.right = '0';
+    s.bottom = '0';
+  }
+
+  /** 分栏分隔条被拖动 / 窗口改大小 / 切模式，都要重新量一遍 */
+  function watchLayout() {
+    var pane = document.querySelector('.pane--edit');
+    if (pane && window.ResizeObserver && !repositionObserver) {
+      repositionObserver = new ResizeObserver(positionPanel);
+      repositionObserver.observe(pane);
+    }
   }
 
   function isOpen() {
@@ -836,54 +920,119 @@
     if (target) markSelected(target);
   }
 
-  /** 工具条上的「图表」按钮：编辑光标附近的图表，没有就新插一个 */
-  function openNearest(block) {
-    var found = null;
-    if (block) found = diagramIn(block);
-
-    if (!found) {
-      var blocks = document.querySelectorAll('#preview .mm-block');
-      for (var i = 0; i < blocks.length; i++) {
-        var d = blocks[i].querySelector('.mm-mermaid');
-        if (d) {
-          found = d;
-          block = blocks[i];
-          break;
-        }
-      }
-    }
-
-    if (found) {
-      openFor(found, null);
+  /**
+   * 工具条 / 预览功能栏上的「图表」按钮。
+   *
+   * 光标本来就落在某个图表上 → 直接开它的面板；
+   * 否则 → 弹种类选择（那里同时给出「编辑现有图表」和五种新建）。
+   *
+   * 刻意不「找一个最近的图表就打开」：用户点的是「图表」，多半是想**新增**
+   * 一个，自作主张把他领到一张已有图上会很迷惑。
+   */
+  function openNearest(block, anchor) {
+    var here = block ? diagramIn(block) : null;
+    if (here) {
+      openFor(here, null);
       return;
     }
 
-    insertNew();
+    var existing = document.querySelector('#preview .mm-mermaid');
+    pickType(anchor, existing);
   }
 
-  /** 插入一张空白类图并立刻打开面板 */
-  function insertNew() {
-    var starter = [
-      'classDiagram',
-      '  class NewClass {',
-      '    +String field',
-      '    +method()',
-      '  }'
-    ].join('\n');
+  /**
+   * 选图表种类。
+   *
+   * existing 不为空时，第一项是「编辑当前图表」—— 那时候用户也可能只是
+   * 想接着改上一张。
+   */
+  function pickType(anchor, existing) {
+    closePicker();
 
-    MM.editor.insertBlock('```mermaid\n' + starter + '\n```');
+    var pop = node('div', 'dg-pick');
+    pop.setAttribute('data-mm-ui', '1');
 
-    // 等一次渲染，图表出来了才找得到它对应的块
-    setTimeout(function () {
-      var blocks = document.querySelectorAll('#preview .mm-block');
-      for (var i = 0; i < blocks.length; i++) {
-        var d = blocks[i].querySelector('.mm-mermaid');
-        if (d) {
-          openFor(d, null);
-          return;
-        }
+    if (existing) {
+      pop.appendChild(
+        pickItem('diagramEditCurrent', '✎', function () {
+          closePicker();
+          openFor(existing, null);
+        })
+      );
+      pop.appendChild(node('div', 'dg-pick__sep'));
+    }
+
+    var titleKey = {
+      classDiagram: 'diagramTypeClass',
+      flowchart: 'diagramTypeFlow',
+      sequenceDiagram: 'diagramTypeSequence',
+      stateDiagram: 'diagramTypeState',
+      erDiagram: 'diagramTypeEr'
+    };
+
+    MM.diagram.NEW_TYPES.forEach(function (kind) {
+      pop.appendChild(
+        pickItem(titleKey[kind], '◇', function () {
+          closePicker();
+          insertNew(kind);
+        })
+      );
+    });
+
+    document.body.appendChild(pop);
+    picker = pop;
+
+    // 贴在锚点下沿；没有锚点就摆在预览区中间偏上
+    var r = anchor && anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : null;
+    var left = r ? r.left : window.innerWidth / 2 - 90;
+    var top = r ? r.bottom + 6 : 120;
+
+    var w = pop.offsetWidth || 180;
+    var h = pop.offsetHeight || 200;
+    if (left + w > window.innerWidth - 8) left = window.innerWidth - w - 8;
+    if (left < 8) left = 8;
+    if (top + h > window.innerHeight - 8) top = Math.max(8, r ? r.top - h - 6 : window.innerHeight - h - 8);
+
+    pop.style.left = left + 'px';
+    pop.style.top = top + 'px';
+  }
+
+  function pickItem(titleKey, glyph, run) {
+    var b = node('button', 'dg-pick__item');
+    b.type = 'button';
+    b.appendChild(node('span', 'dg-pick__glyph', glyph));
+    b.appendChild(node('span', 'dg-pick__label', t(titleKey)));
+    b.addEventListener('click', run);
+    return b;
+  }
+
+  function closePicker() {
+    if (picker && picker.parentNode) picker.parentNode.removeChild(picker);
+    picker = null;
+  }
+
+  /** 插一张指定类型的空图，并立刻把面板打开在它上面 */
+  function insertNew(kind) {
+    // 先把反向修改那边攒着的改动落地、并解除挂起 ——
+    // 不然新插进来的图表会被「按住不重建」卡住，压根看不见
+    MM.liveEdit.flush();
+    MM.preview.setHold(false);
+
+    var before = document.querySelectorAll('#preview .mm-mermaid').length;
+    MM.editor.insertBlock('```mermaid\n' + MM.diagram.template(kind) + '\n```');
+
+    // 图表是异步渲染的（mermaid 还得先按需加载），盯着图表数量变多就开面板。
+    // 固定等一个时长要么白等、要么在大文档上等不够。
+    var tries = 0;
+    (function waitForIt() {
+      tries++;
+      var now = document.querySelectorAll('#preview .mm-mermaid');
+      if (now.length > before) {
+        openFor(now[now.length - 1], null);
+        return;
       }
-    }, 400);
+      if (tries < 40) setTimeout(waitForIt, 100);
+    })();
   }
 
   /** 点画布上的节点 → 在面板里高亮对应的那一项 */
@@ -915,11 +1064,33 @@
     openFor: openFor,
     openNearest: openNearest,
     insertNew: insertNew,
+    pickType: pickType,
+    closePicker: closePicker,
     close: closePanel,
     isOpen: isOpen,
     /** 供测试用 */
     _ctx: function () {
       return ctx;
-    }
+    },
+    _position: positionPanel
   };
+
+  // 切模式（分栏 ↔ 纯预览）之后面板的去处不一样，跟着重放一次。
+  // 只监听一次：这个 IIFE 只跑一遍。
+  if (MM.store && MM.store.watch) {
+    MM.store.watch('mode', function () {
+      positionPanel();
+      closePicker();
+    });
+  }
+  window.addEventListener('resize', function () {
+    positionPanel();
+    closePicker();
+  });
+  // 点别处收起选种弹层。capture 是为了先于面板自己的点击处理
+  document.addEventListener('pointerdown', function (e) {
+    if (!picker) return;
+    if (picker.contains(e.target)) return;
+    closePicker();
+  }, true);
 })();

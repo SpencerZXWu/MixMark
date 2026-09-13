@@ -12,16 +12,16 @@
      顺序不能变：令牌 → 主题 → 基础 → 布局 → 组件 → 编辑器 → 预览
      后面的文件会用到前面的变量与重置规则。
      ========================================================================== -->
-<link rel="stylesheet" href="vendor/katex/katex.min.css?v=99">
-<link rel="stylesheet" href="css/tokens.css?v=99">
-<link rel="stylesheet" href="css/theme.css?v=99">
-<link rel="stylesheet" href="css/base.css?v=99">
-<link rel="stylesheet" href="css/layout.css?v=99">
-<link rel="stylesheet" href="css/components.css?v=99">
-<link rel="stylesheet" href="css/editor.css?v=99">
-<link rel="stylesheet" href="css/preview.css?v=99">
-<link rel="stylesheet" href="css/home.css?v=99">
-<link rel="stylesheet" href="css/ai.css?v=99">
+<link rel="stylesheet" href="vendor/katex/katex.min.css?v=102">
+<link rel="stylesheet" href="css/tokens.css?v=102">
+<link rel="stylesheet" href="css/theme.css?v=102">
+<link rel="stylesheet" href="css/base.css?v=102">
+<link rel="stylesheet" href="css/layout.css?v=102">
+<link rel="stylesheet" href="css/components.css?v=102">
+<link rel="stylesheet" href="css/editor.css?v=102">
+<link rel="stylesheet" href="css/preview.css?v=102">
+<link rel="stylesheet" href="css/home.css?v=102">
+<link rel="stylesheet" href="css/ai.css?v=102">
 </head>
 <body>
 
@@ -267,91 +267,91 @@
      依赖：全部是本地 IIFE 经典脚本。
      不使用 CDN（要离线可用），不使用 type="module"（file:// 下会被 CORS 拒绝）。
      ========================================================================== -->
-<script src="vendor/marked.js?v=99"></script>
-<script src="vendor/purify.js?v=99"></script>
-<script src="vendor/katex/katex.min.js?v=99"></script>
-<script src="vendor/katex/mhchem.min.js?v=99"></script>
-<script src="vendor/hljs.bundle.js?v=99"></script>
-<script src="vendor/codemirror.bundle.js?v=99"></script>
+<script src="vendor/marked.js?v=102"></script>
+<script src="vendor/purify.js?v=102"></script>
+<script src="vendor/katex/katex.min.js?v=102"></script>
+<script src="vendor/katex/mhchem.min.js?v=102"></script>
+<script src="vendor/hljs.bundle.js?v=102"></script>
+<script src="vendor/codemirror.bundle.js?v=102"></script>
 
 <!-- ==========================================================================
      业务代码：加载顺序即依赖顺序，不可随意调换。
      ========================================================================== -->
 <!-- 1. 基础设施 -->
-<script src="js/i18n.js?v=99"></script>
-<script src="js/core/store.js?v=99"></script>
-<script src="js/core/settings.js?v=99"></script>
+<script src="js/i18n.js?v=102"></script>
+<script src="js/core/store.js?v=102"></script>
+<script src="js/core/settings.js?v=102"></script>
 <!-- 仓库注册表：文档层要按仓库取工作台状态，必须排在 docs.js 之前 -->
-<script src="js/core/repos.js?v=99"></script>
-<script src="js/core/commands.js?v=99"></script>
+<script src="js/core/repos.js?v=102"></script>
+<script src="js/core/commands.js?v=102"></script>
 
 <!-- 2. 存储层（顺序要紧：先有 library 工厂，各后端才能建出 provider；
      最后才是选路模块，它要读前面注册好的那几个） -->
-<script src="js/provider/library.js?v=99"></script>
-  <script src="js/provider/localstore.js?v=99"></script>
-  <script src="js/provider/idb.js?v=99"></script>
-  <script src="js/provider/fsa.js?v=99"></script>
-  <script src="js/provider/diskfile.js?v=99"></script>
+<script src="js/provider/library.js?v=102"></script>
+  <script src="js/provider/localstore.js?v=102"></script>
+  <script src="js/provider/idb.js?v=102"></script>
+  <script src="js/provider/fsa.js?v=102"></script>
+  <script src="js/provider/diskfile.js?v=102"></script>
   <!-- 桌面端后端必须在 index.js 之前：选路时它要已在 MM.providers 里 -->
-  <script src="js/provider/electron.js?v=99"></script>
-  <script src="js/provider/index.js?v=99"></script>
+  <script src="js/provider/electron.js?v=102"></script>
+  <script src="js/provider/index.js?v=102"></script>
 
 <!-- 3. 文档 -->
 <!-- 首启示例（欢迎文档）的正文，中英双语。docs.js 首启要拿它建文档 -->
-<script src="js/core/welcome.js?v=99"></script>
-<script src="js/core/docs.js?v=99"></script>
-<script src="js/core/recovery.js?v=99"></script>
-<script src="js/core/search.js?v=99"></script>
+<script src="js/core/welcome.js?v=102"></script>
+<script src="js/core/docs.js?v=102"></script>
+<script src="js/core/recovery.js?v=102"></script>
+<script src="js/core/search.js?v=102"></script>
 
 <!-- 4. 编辑器层 -->
-<script src="js/editor/md-syntax.js?v=99"></script>
-<script src="js/editor/math-symbols.js?v=99"></script>
-<script src="js/editor/text-symbols.js?v=99"></script>
-<script src="js/editor/cm-setup.js?v=99"></script>
-<script src="js/editor/math-complete.js?v=99"></script>
-<script src="js/editor/actions.js?v=99"></script>
+<script src="js/editor/md-syntax.js?v=102"></script>
+<script src="js/editor/math-symbols.js?v=102"></script>
+<script src="js/editor/text-symbols.js?v=102"></script>
+<script src="js/editor/cm-setup.js?v=102"></script>
+<script src="js/editor/math-complete.js?v=102"></script>
+<script src="js/editor/actions.js?v=102"></script>
 
 <!-- 5. 预览层 -->
-<script src="js/preview/pipeline.js?v=99"></script>
+<script src="js/preview/pipeline.js?v=102"></script>
 <!-- 反向修改用：DOM→Markdown 序列化、图表源码⇄模型，都是纯函数，先加载 -->
-<script src="js/preview/md-out.js?v=99"></script>
-<script src="js/preview/diagram-model.js?v=99"></script>
-<script src="js/preview/line-map.js?v=99"></script>
+<script src="js/preview/md-out.js?v=102"></script>
+<script src="js/preview/diagram-model.js?v=102"></script>
+<script src="js/preview/line-map.js?v=102"></script>
 <!-- 反向修改：依赖上面两个 + MM.editor + MM.preview -->
-<script src="js/preview/live-edit.js?v=99"></script>
-<script src="js/preview/scroll-sync.js?v=99"></script>
+<script src="js/preview/live-edit.js?v=102"></script>
+<script src="js/preview/scroll-sync.js?v=102"></script>
 
 <!-- 6. UI 层 -->
-<script src="js/ui/toast.js?v=99"></script>
-<script src="js/ui/dialogs.js?v=99"></script>
-<script src="js/ui/palette.js?v=99"></script>
-<script src="js/ui/menubar.js?v=99"></script>
-<script src="js/ui/find-bar.js?v=99"></script>
-<script src="js/ui/tabs.js?v=99"></script>
-<script src="js/ui/repo-menu.js?v=99"></script>
-<script src="js/ui/drop-assets.js?v=99"></script>
-<script src="js/ui/symbol-panel.js?v=99"></script>
+<script src="js/ui/toast.js?v=102"></script>
+<script src="js/ui/dialogs.js?v=102"></script>
+<script src="js/ui/palette.js?v=102"></script>
+<script src="js/ui/menubar.js?v=102"></script>
+<script src="js/ui/find-bar.js?v=102"></script>
+<script src="js/ui/tabs.js?v=102"></script>
+<script src="js/ui/repo-menu.js?v=102"></script>
+<script src="js/ui/drop-assets.js?v=102"></script>
+<script src="js/ui/symbol-panel.js?v=102"></script>
 <!-- 图表面板：反向修改的可视化部分，依赖 MM.diagram / MM.liveEdit -->
-<script src="js/ui/diagram-panel.js?v=99"></script>
-<script src="js/ui/outline.js?v=99"></script>
-<script src="js/ui/sidebar.js?v=99"></script>
-<script src="js/ui/statusbar.js?v=99"></script>
-<script src="js/ui/settings-page.js?v=99"></script>
-<script src="js/ui/app-commands.js?v=99"></script>
-<script src="js/ui/home.js?v=99"></script>
-<script src="js/ui/ai-panel.js?v=99"></script>
+<script src="js/ui/diagram-panel.js?v=102"></script>
+<script src="js/ui/outline.js?v=102"></script>
+<script src="js/ui/sidebar.js?v=102"></script>
+<script src="js/ui/statusbar.js?v=102"></script>
+<script src="js/ui/settings-page.js?v=102"></script>
+<script src="js/ui/app-commands.js?v=102"></script>
+<script src="js/ui/home.js?v=102"></script>
+<script src="js/ui/ai-panel.js?v=102"></script>
   <!-- 桌面端胶水层：浏览器里整个空转（靠 window.mixmark 自判），可以无条件引入 -->
-  <script src="js/ui/desktop.js?v=99"></script>
-  <script src="js/ui/shell.js?v=99"></script>
+  <script src="js/ui/desktop.js?v=102"></script>
+  <script src="js/ui/shell.js?v=102"></script>
 
 <!-- 7. 导出 -->
-<script src="js/export/md.js?v=99"></script>
-<script src="js/export/migrate.js?v=99"></script>
-<script src="js/export/html.js?v=99"></script>
-<script src="js/export/pdf.js?v=99"></script>
+<script src="js/export/md.js?v=102"></script>
+<script src="js/export/migrate.js?v=102"></script>
+<script src="js/export/html.js?v=102"></script>
+<script src="js/export/pdf.js?v=102"></script>
 
 <!-- 8. 启动（必须最后） -->
-<script src="js/main.js?v=99"></script>
+<script src="js/main.js?v=102"></script>
 
 </body>
 </html>

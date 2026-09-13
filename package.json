@@ -1,6 +1,6 @@
 {
   "name": "mixmark",
-  "version": "0.6.6",
+  "version": "0.6.7",
   "private": true,
   "description": "MixMark — 极简 Markdown 文档编辑器（浏览器优先 / 本地优先 / 桌面端真实文件夹）",
   "author": "MixMark",

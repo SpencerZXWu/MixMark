@@ -1320,6 +1320,13 @@ kbd.mm-kbd {
   flex: none;
 }
 
+/* 分栏模式下挪到编辑区下半：那时它是「下半屏」，分隔线该画在上边 */
+.dg-panel--bottom {
+  border-left: none;
+  border-top: 1px solid var(--mm-border);
+  box-shadow: var(--mm-shadow-md);
+}
+
 .dg-panel__title {
   font-weight: var(--mm-weight-bold);
   color: var(--mm-text-1);
@@ -1510,4 +1517,59 @@ kbd.mm-kbd {
   margin: var(--mm-sp-2) 0 0;
   color: var(--mm-text-3);
   line-height: 1.6;
+}
+
+/* ==========================================================================
+   图表种类选择（插入图表时弹的那一层）
+   ========================================================================== */
+
+.dg-pick {
+  position: fixed;
+  z-index: 70;
+  min-width: 168px;
+  padding: 4px;
+  background: var(--mm-bg);
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-md);
+  box-shadow: var(--mm-shadow-md);
+  font-family: var(--mm-font-ui);
+  font-size: var(--mm-fs-sm);
+}
+
+.dg-pick__item {
+  display: flex;
+  align-items: center;
+  gap: var(--mm-sp-2);
+  width: 100%;
+  padding: 7px var(--mm-sp-2);
+  border: none;
+  border-radius: var(--mm-radius-sm);
+  background: transparent;
+  color: var(--mm-text-1);
+  font-family: inherit;
+  font-size: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dg-pick__item:hover {
+  background: var(--mm-accent-weak);
+  color: var(--mm-accent);
+}
+
+.dg-pick__glyph {
+  flex: none;
+  width: 16px;
+  text-align: center;
+  color: var(--mm-text-3);
+}
+
+.dg-pick__item:hover .dg-pick__glyph {
+  color: var(--mm-accent);
+}
+
+.dg-pick__sep {
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--mm-border);
 }

@@ -196,7 +196,9 @@
       liveEditClickBlockFirst: '先把光标放进预览里的某一段。',
       cmdLiveEdit: '反向修改：预览区可编辑',
       fmtDiagram: '图表',
+      tbDiagram: '插入图表',
       cmdEditDiagram: '编辑当前图表',
+      diagramEditCurrent: '编辑当前图表',
 
       /* 图表面板 */
       diagramPanelTitle: '图表',
@@ -769,7 +771,9 @@
       liveEditClickBlockFirst: 'Put the cursor in a block of the preview first.',
       cmdLiveEdit: 'Live edit: make the preview editable',
       fmtDiagram: 'Diagram',
+      tbDiagram: 'Insert diagram',
       cmdEditDiagram: 'Edit the current diagram',
+      diagramEditCurrent: 'Edit the current diagram',
 
       /* Diagram panel */
       diagramPanelTitle: 'Diagram',
