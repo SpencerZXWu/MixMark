@@ -292,6 +292,20 @@
       var innerBreaks = body.match(/\n/g);
       var endLine = startLine + (innerBreaks ? innerBreaks.length : 0);
 
+      /* 块级公式要另外算。
+       *
+       * protectMath 把 `$$…$$` 折成了「一行占位符 + 等量换行」，好让行号
+       * 累计不出错。但对**这一块自己**来说，那几行是公式的正文，不是块与块
+       * 之间的空行 —— 上面刚把尾部换行剥掉了，这里必须补回来。
+       * 不补的话块的 data-line-end 会少算两行，反向修改改这条公式时只换掉
+       * 第一行，后两行原地留下，变成两份。 */
+      var solo = new RegExp('^' + MATH_OPEN + '(\\d+)' + MATH_CLOSE + '$').exec(body);
+      if (solo) {
+        var mathItem = mathStore[Number(solo[1])];
+        var texBreaks = mathItem && mathItem.tex ? mathItem.tex.match(/\n/g) : null;
+        if (texBreaks) endLine = startLine + texBreaks.length;
+      }
+
       parts.push(
         '<div class="mm-block' + extraClass + '"' +
           ' data-line="' + startLine + '"' +
@@ -432,6 +446,17 @@
       span.className = 'mm-math-error';
       span.textContent = item.tex;
     }
+
+    /* 公式整体是不可编辑的原子节点。
+     *
+     * 反向修改回写时，公式的 TeX 是从 MathML 的 <annotation> 里取的（见
+     * preview/md-out.js），所以往渲染结果里敲字根本落不到源码上 ——
+     * 用户敲了半天什么也没发生，比敲不进去更让人困惑。
+     * 标成 contenteditable=false 之后光标进不去，整块选中删掉则是「这次
+     * 编辑就是删掉这条公式」，语义清楚。
+     * 要改公式本身，去源码区改。 */
+    span.setAttribute('contenteditable', 'false');
+
     return span;
   }
 

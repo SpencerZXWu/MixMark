@@ -51,6 +51,44 @@
     return fence + pad + text + pad + fence;
   }
 
+  /**
+   * 从渲染好的公式里把原始 TeX 挖出来。
+   *
+   * KaTeX 会把输入原封不动地存一份在 MathML 的
+   * `<annotation encoding="application/x-tex">` 里（就是为了「复制公式能粘回
+   * 去」这件事）。不取它的话，回写会把 `.katex` 里的文字全部拉平 ——
+   * 而那是 HTML 与 MathML 两套渲染的叠加，`$E = mc^2$` 会变成
+   * `E=mc2E = mc^2E=mc2`，公式当场就毁了。
+   */
+  function texOf(el) {
+    var ann = el.querySelector && el.querySelector('annotation[encoding="application/x-tex"]');
+    return ann ? ann.textContent : '';
+  }
+
+  function hasClass(el, name) {
+    return !!(el.classList && el.classList.contains(name));
+  }
+
+  /**
+   * 块级公式整块地看。
+   *
+   * `$$…$$` 经 protectMath 变成单行占位符，marked 于是给它包了一层 `<p>`。
+   * 如果那个 `<p>` 里除去空白就只剩一条 katex-display，那它本来就是块级公式，
+   * 要写成「单独成行」的三行形式，而不能挤进段落里。
+   */
+  function displayMathOnly(el) {
+    var kids = [];
+    for (var i = 0; i < el.childNodes.length; i++) {
+      var n = el.childNodes[i];
+      if (n.nodeType === 3 && !n.nodeValue.trim()) continue;
+      kids.push(n);
+    }
+    if (kids.length !== 1 || kids[0].nodeType !== 1) return null;
+    if (!hasClass(kids[0], 'katex-display')) return null;
+    var tex = texOf(kids[0]);
+    return tex || null;
+  }
+
   /* ------------------------------------------------------------------
      行内
      ------------------------------------------------------------------ */
@@ -66,6 +104,18 @@
         continue;
       }
       if (n.nodeType !== 1) continue;
+
+      // 公式要在最前面拦下来：`.katex` 里面的东西不是 Markdown
+      if (hasClass(n, 'katex-display')) {
+        var dt = texOf(n);
+        if (dt) out += '$$' + dt + '$$';
+        continue;
+      }
+      if (hasClass(n, 'katex') || hasClass(n, 'mm-math-error')) {
+        var it = texOf(n) || n.textContent;
+        if (it) out += '$' + it + '$';
+        continue;
+      }
 
       var tag = n.tagName.toLowerCase();
 
@@ -99,9 +149,12 @@
           break;
 
         case 'br':
-          // 硬换行：两个空格 + 换行。用纯 \n 的话会被折成空格，
-          // 用户按 Shift+Enter 分出的行就白分了。
-          out += '  \n';
+          /* 开了 breaks 时，源码里的**单个换行**就渲染成 <br> ——
+             所以对它要写回普通换行，那才能真正对上。
+             一律写 `  \n`（硬换行）的话，每编辑一次就给每行尾巴添两个
+             空格，文档会越改越脏。
+             breaks 关着时 <br> 只可能来自显式硬换行，那就得写两个空格。 */
+          out += MM.settings && MM.settings.get('breaks') !== false ? '\n' : '  \n';
           break;
 
         case 'input':
@@ -132,7 +185,12 @@
 
   function image(n) {
     var alt = escapeText(n.getAttribute('alt') || '');
-    var src = n.getAttribute('src') || '';
+
+    /* 拖拽引用会把裸文件名换成 blob: URL（见 ui/drop-assets.js），
+       那是当下这一次会话才有效的地址，写进文档就永久坏了。
+       所以优先用它换之前记下的那个原始写法。 */
+    var src = (n.dataset && n.dataset.mdSrc) || n.getAttribute('src') || '';
+
     if (!src) return alt;
     return '![' + alt + '](' + src.replace(/[()]/g, '\\$&') + ')';
   }
@@ -150,6 +208,10 @@
       var text = inline(el).trim();
       return new Array(HEADING[tag] + 1).join('#') + ' ' + text;
     }
+
+    // 块级公式：单独占一段，不要被当成普通段落里的行内内容
+    var displayTex = displayMathOnly(el);
+    if (displayTex) return '$$\n' + displayTex + '\n$$';
 
     switch (tag) {
       case 'p':
@@ -302,20 +364,41 @@
     for (var i = 0; i < headCells.length; i++) cols.push(cellText(headCells[i]));
 
     lines.push('| ' + cols.join(' | ') + ' |');
-    lines.push('| ' + cols.map(function () { return '---'; }).join(' | ') + ' |');
+
+    /* 对齐不能丢。
+       `:---:` 这些是写在分隔行里的，而渲染后它变成了 th 上的
+       align / style。不读回来的话，改一次表格就把三列对齐全部拍平 ——
+       而且是一去不回的那种丢。 */
+    var marks = [];
+    for (var c = 0; c < cols.length; c++) {
+      var align = cellAlign(headCells[c]);
+      marks.push(
+        align === 'center' ? ':---:' : align === 'right' ? '---:' : align === 'left' ? ':---' : '---'
+      );
+    }
+    lines.push('| ' + marks.join(' | ') + ' |');
 
     // thead 缺失时第一行正文已经被当成表头用掉了，别再输出一遍
     var start = head ? 0 : 1;
     for (var r = start; r < bodyRows.length; r++) {
       var cells = bodyRows[r].children;
       var row = [];
-      for (var c = 0; c < cols.length; c++) {
-        row.push(cells[c] ? cellText(cells[c]) : '');
+      for (var k = 0; k < cols.length; k++) {
+        row.push(cells[k] ? cellText(cells[k]) : '');
       }
       lines.push('| ' + row.join(' | ') + ' |');
     }
 
     return lines.join('\n');
+  }
+
+  /** 单元格的对齐方式，marked 写在 align 或 style 上（两种都可能） */
+  function cellAlign(cell) {
+    if (!cell || !cell.getAttribute) return '';
+    var a = (cell.getAttribute('align') || '').toLowerCase();
+    if (!a && cell.style && cell.style.textAlign) a = String(cell.style.textAlign).toLowerCase();
+    if (a === 'middle') a = 'center';
+    return a;
   }
 
   /* ------------------------------------------------------------------

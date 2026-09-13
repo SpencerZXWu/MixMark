@@ -147,6 +147,9 @@
       }
 
       img.dataset.assetResolved = '1';
+      // 把原始写法记下来：反向修改回写时要用它。blob: URL 只在这一会话有效，
+      // 写进文档就成了一个永远打不开的地址。
+      if (!img.dataset.mdSrc) img.dataset.mdSrc = src;
       MM.disk.assets.resolve(src).then(function (url) {
         if (url) {
           // 解析成功要把占位框摘掉 —— 早先那轮渲染可能已经给它加上了
