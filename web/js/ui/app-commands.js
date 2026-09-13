@@ -547,6 +547,16 @@
       // 不按环境置灰：灰按钮说不出「为什么不能点」。
       // 点下去给一句明确的提示，比沉默地变灰有用
       run: function () {
+        // 桌面端转给原生对话框那条实现（file.importFiles）。
+        //
+        // 转过去而不是在这里写第二份：两者要做的事完全一样，差别只在
+        // 「文件从哪来」。原先这里直接判 MM.disk.supported()，而那是浏览器
+        // 的 File System Access —— 桌面端必然为假，于是从命令面板里选
+        // 「打开文件」只会看到「当前环境不能直接读写磁盘」，而它明明能。
+        if (MM.desktopBridge && MM.desktopBridge.available()) {
+          return MM.commands.run('file.importFiles');
+        }
+
         if (!MM.disk.supported()) {
           diskUnavailable();
           return;
@@ -589,6 +599,13 @@
         return !!MM.store.get().docId;
       },
       run: function () {
+        // 桌面端：另存为走原生保存对话框（file.exportToFile）。
+        // 理由同 file.open：这里判的是浏览器的 File System Access，
+        // 在桌面端恒为假
+        if (MM.desktopBridge && MM.desktopBridge.available()) {
+          return MM.commands.run('file.exportToFile');
+        }
+
         if (!MM.disk.supported()) {
           diskUnavailable();
           return;
