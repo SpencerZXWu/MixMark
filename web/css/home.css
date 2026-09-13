@@ -158,41 +158,28 @@
   line-height: 1.4;
 }
 
-.home-card__btn {
-  align-self: flex-start;
-  margin-top: 4px;
-  padding: 7px 14px;
-  border: 1px solid var(--mm-border);
+/* 新建仓库：这是这一页唯一的动作，居中放在列表下面 ——
+   靠左会显得像列表的一部分
+   用强调色描边而不是实心填充：实心要一对「强调底 + 其上文字」的颜色令牌，
+   那是换主题时最容易配歪的东西 */
+.home__add {
+  margin-top: 2px;
+  padding: 8px 16px;
+  border: 1px solid var(--mm-accent);
   border-radius: var(--mm-radius-sm);
   background: var(--mm-surface);
-  color: var(--mm-text-1);
-  font-size: var(--mm-fs-sm);
-  cursor: pointer;
-  transition: background var(--mm-dur-fast) var(--mm-ease),
-    border-color var(--mm-dur-fast) var(--mm-ease);
-}
-
-.home-card__btn:hover {
-  background: var(--mm-surface-2);
-}
-
-/* 主行动按钮用强调色描边 + 强调色文字。
-   不用实心填充：实心需要一对「强调底 + 其上文字」的颜色令牌，
-   而换主题时那对最容易配歪，描边方案天然跟随主题 */
-.home-card__btn.is-primary {
-  border-color: var(--mm-accent);
   color: var(--mm-accent);
+  font-size: var(--mm-fs-sm);
   font-weight: var(--mm-weight-medium);
+  cursor: pointer;
+  transition: background var(--mm-dur-fast) var(--mm-ease);
 }
 
-.home-card__btn.is-primary:hover {
+.home__add:hover {
   background: var(--mm-accent-weak);
 }
 
-/* ---- 脚注 ---- */
-
-.home__note {
-  margin: 0;
-  font-size: var(--mm-fs-sm);
-  color: var(--mm-text-3);
+/* 藏起来就是真藏起来：作者样式里的 display 会盖掉 UA 的 [hidden] */
+.home__add[hidden] {
+  display: none;
 }

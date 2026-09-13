@@ -784,6 +784,9 @@
       })
       .then(function () {
         MM.bus.emit('repo:changed', { id: repo.id });
+        // 切成功了就离开首页进工作区。任何入口（首页卡片 / 侧栏 / 状态栏 / 设置页）
+        // 都是这个结果 —— 否则用户点了创建、界面还停在原处，像是没生效
+        if (MM.home && MM.home.hide) MM.home.hide();
         return repo;
       })
       .catch(function (err) {

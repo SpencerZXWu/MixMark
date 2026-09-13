@@ -77,6 +77,14 @@
     return null;
   }
 
+  /**
+   * 列表变了（新增 / 改名 / 移除 / 当前项换人）。
+   * 统一在这里发，别指望调用方记得发 —— 漏一次就是「新建了仓库但界面上没出现」。
+   */
+  function notify() {
+    if (MM.bus && MM.bus.emit) MM.bus.emit('repo:list');
+  }
+
   /** 本机文档库永远在列表里 */
   function ensure() {
     if (!find(LOCAL_ID)) {
@@ -99,6 +107,9 @@
     state = read() || { active: null, items: [] };
     ensure();
     write();
+    // 列表就绪也算一次变化：界面模块比这一层先初始化完，
+    // 它们当时画的是空列表，得有人叫它们重画一次
+    notify();
     return Promise.resolve();
   }
 
@@ -204,6 +215,7 @@
     };
     state.items.push(repo);
     write();
+    notify();
     return repo;
   }
 
@@ -213,6 +225,7 @@
     if (!repo) return null;
     Object.assign(repo, fields || {});
     write();
+    notify();
     return repo;
   }
 
@@ -232,6 +245,7 @@
     }
     if (state.active === id) state.active = LOCAL_ID;
     write();
+    notify();
     return true;
   }
 
@@ -241,6 +255,7 @@
     var repo = find(id);
     if (repo) repo.lastOpenedAt = Date.now();
     write();
+    notify();
     return true;
   }
 

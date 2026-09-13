@@ -142,8 +142,11 @@
       });
     }
 
-    // 仓库列表变了（新建 / 改名 / 移除）就重画
+    // 仓库列表变了（新建 / 改名 / 移除）就重画。
+    // repo:changed 也要听：首页比仓库层先初始化完，启动时那一次渲染是空的，
+    // 仓库层就绪后会发这个事件，正好补上首屏
     MM.bus.on('repo:list', render);
+    MM.bus.on('repo:changed', render);
   }
 
   function init() {
