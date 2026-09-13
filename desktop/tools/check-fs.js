@@ -188,14 +188,26 @@ section('⑦ 首次连接：把文件夹里已有的 .md 收进来');
   fs.writeFileSync(path.join(root, '随笔.txt'), '随手写的', 'utf8');
   fs.writeFileSync(path.join(root, '忽略我.png'), 'not markdown', 'utf8');
 
+  // 依赖与版本库里的 .md 不是用户的笔记。实测拿仓库根当库时，
+  // 一个 node_modules 就能塞进来 676 篇第三方 README，文档树直接淹掉。
+  fs.mkdirSync(path.join(root, 'node_modules', 'somepkg'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'node_modules', 'somepkg', 'README.md'), '# pkg\n', 'utf8');
+  fs.mkdirSync(path.join(root, '.git'), { recursive: true });
+  fs.writeFileSync(path.join(root, '.git', 'README.md'), '# git internals\n', 'utf8');
+  fs.mkdirSync(path.join(root, '笔记', 'node_modules'), { recursive: true });
+  fs.writeFileSync(path.join(root, '笔记', 'node_modules', 'README.md'), '# nested\n', 'utf8');
+
   const l = lib.open(root);
   const r = l.adoptExisting();
 
   const docs = l.docsIndex();
   const folders = l.foldersIndex();
+  const placed = JSON.parse(fs.readFileSync(path.join(root, '.mixmark', 'files.json'), 'utf8'));
 
   ok('收进来 3 篇', r.adopted === 3, JSON.stringify(r));
   ok('标题不带后缀', docs.map((d) => d.title).sort().join(',') === '很久以前,散落的,随笔', docs.map((d) => d.title).join(','));
+  ok('没去扫 node_modules / .git', !Object.keys(placed).some((id) => /node_modules|\.git/i.test(placed[id])), JSON.stringify(placed));
+  ok('嵌套的 node_modules 也跳过', !folders.some((f) => f.name === 'node_modules'), JSON.stringify(folders));
   ok('真实目录建成了虚拟文件夹', folders.length === 1 && folders[0].name === '旧笔记', JSON.stringify(folders));
   ok('子目录那篇挂到了文件夹下', docs.find((d) => d.title === '很久以前').folderId === folders[0].id);
   ok('png 没被当成文档', !docs.some((d) => /png/.test(d.title)));

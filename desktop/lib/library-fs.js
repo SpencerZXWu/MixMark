@@ -40,6 +40,30 @@ const RESERVED = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$/i;
 const MAX_SEGMENT = 80;
 
 /**
+ * 收编已有文档时**不进**的目录。
+ *
+ * 这些里面就算躺着 .md，也不是用户写的笔记：一个 node_modules 里能有上千个
+ * README/LICENSE。实测把仓库根当成库时会一口气收进 676 篇第三方 readme，
+ * 文档树直接淹掉。
+ */
+const SKIP_DIRS = new Set([
+  '.git',
+  '.hg',
+  '.svn',
+  'node_modules',
+  'bower_components',
+  '__pycache__',
+  '.venv',
+  'venv',
+  '.cache',
+  '.idea',
+  '.vs'
+]);
+
+/** 收编数量上限：防止有人误把整个盘当库，一次塞进来几十万篇 */
+const MAX_ADOPT = 3000;
+
+/**
  * 把任意字符串变成能当文件名用的样子。
  * 中文原样保留 —— Node 与 NTFS 都没问题，不要为了「保险」把中文音译掉。
  */
@@ -349,6 +373,7 @@ function open(root) {
 
     const found = [];
     (function walk(dir, prefix) {
+      if (found.length >= MAX_ADOPT) return;
       let entries;
       try {
         entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -357,7 +382,7 @@ function open(root) {
       }
       for (const e of entries) {
         if (e.isDirectory()) {
-          if (e.name === META_DIR) continue;
+          if (e.name === META_DIR || SKIP_DIRS.has(e.name.toLowerCase())) continue;
           walk(path.join(dir, e.name), prefix ? prefix + '/' + e.name : e.name);
           continue;
         }
@@ -372,6 +397,9 @@ function open(root) {
     })(root, '');
 
     if (!found.length) return { adopted: 0 };
+    if (found.length >= MAX_ADOPT) {
+      console.warn('[library-fs] 这个文件夹里的文档太多了，只收编了前 ' + MAX_ADOPT + ' 篇');
+    }
 
     const stamp = Date.now();
     const folders = [];
