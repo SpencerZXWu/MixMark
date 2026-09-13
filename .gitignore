@@ -31,6 +31,10 @@ android/android/app/debug/
 *.apk
 *.keystore
 
+# 用 MixMark 打开的文件夹都会长出这个元数据目录。
+# 拿本仓库（或它上层的任何文件夹）当文档库时，它不该进版本库。
+.mixmark/
+
 # 系统与编辑器
 .DS_Store
 Thumbs.db

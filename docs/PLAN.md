@@ -291,15 +291,18 @@ MixMark/
 │  │   ├─ katex/  katex.min.js · katex.min.css · fonts/*.woff2
 │  │   └─ VENDOR.md              # 自动生成的依赖清单与版本
 │  └─ assets/  icon.svg
-├─ desktop/    main.js · preload.js · package.json · installer.nsi · build/
-├─ android/    Capacitor 壳工程 + 图标/启动图
+├─ desktop/    Electron 壳
+│              main.js · preload.js · lib/library-fs.js（纯 Node 磁盘层）
+│              build/icon.ico（图标，打包必需的输入）
+│              ※ 安装器由 electron-builder 的 NSIS target 生成，没有手写 .nsi
+├─ android/    ⬜ Capacitor 壳工程（本版未做）
 ├─ tools/
 │  ├─ build-vendor.js            # npm 依赖 → web/vendor 的 IIFE 产物（仅升级依赖时跑）
 │  ├─ check-syntax.js            # 全量语法检查（web/js + tools）
 │  ├─ serve.js                   # 本地静态服务器，用于验证 Tier B 的完整存储能力
 │  ├─ vendor-entry/              # 供 esbuild 打包的 ESM 入口（CM6 / highlight.js）
 │  └─ experiments/               # m1-smoke.html —— 关键风险冒烟测试，长期保留作回归用例
-├─ docs/       PLAN.md · CHANGELOG.md · images/
+├─ docs/       PLAN.md · CHANGELOG.md
 ├─ release/    vX.Y.Z/ 归档（Setup exe / apk / web zip / CHANGELOG）
 ├─ package.json
 ├─ CLAUDE.md                     # 项目铁律 + 踩坑记录
@@ -413,9 +416,9 @@ MixMark/
 4. 改 `css`/`js` 后 `web/index.html` 的 `?v=N` 全部 +1
 5. 不用 `t` 作局部变量名（遮蔽全局翻译函数 `t()`）
 6. PowerShell 里用 `npm.cmd` / `npx.cmd`（执行策略禁止 `npm.ps1`）
-7. 版本号统一维护三处：`desktop/package.json`、`desktop/installer.nsi`、`android/android/app/build.gradle`
-8. `git` 推送走代理：`git -c http.proxy=http://127.0.0.1:7897 push`
-9. 每次改完 `web/` 必须同步桌面版产物
+7. 版本号维护四处：`package.json`、`desktop/package.json`、`web/js/main.js` 的 `MM.VERSION`、`web/index.html` 的 `?v=N`
+8. 需要走代理推送时：`git -c http.proxy=<代理地址> push`
+9. 改完 `web/` 后重新打包桌面端：`cd desktop && npm run build`（`copy-web` 会把 `web/` 同步进 `app/`）
 10. 项目约定与踩坑记录写进 `CLAUDE.md`
 
 ### 9.1 命名规范

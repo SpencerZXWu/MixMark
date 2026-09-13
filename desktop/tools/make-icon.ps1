@@ -15,7 +15,8 @@ $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
 
 $root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)   # → 仓库根
-$src  = Join-Path $root 'docs\images\icon.png'
+# 母图就用应用里那张 logo —— 同一张图只存一份，换图时也只改一处
+$src  = Join-Path $root 'web\assets\logo.png'
 $outDir = Join-Path $root 'desktop\build'
 $outIco = Join-Path $outDir 'icon.ico'
 $outPng = Join-Path $outDir 'icon.png'
