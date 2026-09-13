@@ -416,6 +416,21 @@
       tierIdb: '浏览器数据库',
       tierFsa: '本地文件夹',
       tierElectron: '桌面端',
+
+      /* 桌面端 */
+      cmdImportFiles: '打开 .md 文件…',
+      cmdExportToFile: '导出当前文档到文件…',
+      cmdRevealDoc: '在文件管理器里显示',
+      cmdRescanFolder: '重新扫描文件夹',
+      cmdShowHome: '回到首页',
+      cmdOpenLibraryFolder: '打开文档库所在文件夹',
+      toastImportedFiles: '已收进 {n} 个文件',
+      toastExportedTo: '已导出到 {path}',
+      toastRescanned: '重新扫描完成（新收进 {n} 篇）',
+      desktopFailed: '操作没成功：{msg}',
+      desktopNotConnected: '还没连接文件夹 —— 用「文件 → 连接文件夹…」选一个。',
+      desktopNotOnDisk: '这篇文档还没落盘（先保存一下）',
+      storageUnavailable: '切不过去：{name} 现在还用不了（桌面端要先选一个文件夹）。',
       tierCapacitor: '移动端',
 
       /* 设置 */
@@ -861,6 +876,20 @@
       tierIdb: 'Browser database',
       tierFsa: 'Folder',
       tierElectron: 'Desktop',
+
+      cmdImportFiles: 'Open .md files…',
+      cmdExportToFile: 'Export current document…',
+      cmdRevealDoc: 'Show in file manager',
+      cmdRescanFolder: 'Rescan folder',
+      cmdShowHome: 'Go to home',
+      cmdOpenLibraryFolder: 'Open library folder',
+      toastImportedFiles: 'Imported {n} file(s)',
+      toastExportedTo: 'Exported to {path}',
+      toastRescanned: 'Rescan finished ({n} new)',
+      desktopFailed: 'That did not work: {msg}',
+      desktopNotConnected: 'No folder connected yet — use File → Connect folder…',
+      desktopNotOnDisk: 'This document is not on disk yet (save it first)',
+      storageUnavailable: 'Cannot switch: {name} is not usable right now (desktop needs a folder first).',
       tierCapacitor: 'Mobile',
 
       settingsTitle: 'Settings',

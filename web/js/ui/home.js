@@ -56,7 +56,12 @@
     var repo = el('btn-create-repo');
     if (repo) {
       repo.addEventListener('click', function () {
-        // 不装作能创建：直接说清为什么现在不行、什么时候行
+        // 桌面端真的能做到这件事 —— 选一个文件夹就是「创建仓库」，
+        // 摆在首页的承诺到这儿才真正允现（浏览器里仍然做不到，说清原因即可）
+        if (MM.desktopBridge && MM.desktopBridge.available()) {
+          MM.commands.run('storage.pickFolder');
+          return;
+        }
         MM.toast.show(MM.i18n.t('homeRepoSoon'));
       });
     }

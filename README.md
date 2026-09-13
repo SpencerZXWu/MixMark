@@ -33,7 +33,9 @@
 **存取**
 
 - 浏览器：本机文档库（IndexedDB，`file://` 下自动回落 localStorage）
-- 还没做（M4）：桌面端与安卓端外壳
+- **桌面端（Electron）：文档真的以 `.md` 落进你自己选的文件夹**，虚拟文件夹镜像成真实子目录，
+  首次连接会收编文件夹里已有的 `.md` / `.txt`；安装器见 `release/`
+- 还没做：安卓端外壳
 
 ## 快捷键
 
@@ -64,13 +66,16 @@
 MixMark/
 ├─ web/        唯一业务源码（所有平台的共同真身），运行期零构建
 │  └─ vendor/  唯一的构建产物，**入库**（双击打开也能离线跑）
+├─ desktop/    Electron 壳（主进程 + preload + 纯 Node 的磁盘层）
+│  ├─ lib/         磁盘层，不依赖 Electron，可单独跑 `tools/check-fs.js`
+│  └─ app/         `web/` 的构建期副本，由 `npm run copy-web` 生成（不入库）
 ├─ tools/      构建脚本 + 冒烟测试
 ├─ docs/       规划与变更文档
 └─ CLAUDE.md   项目铁律与踩过的坑，改代码前先读
 ```
 
-`desktop/`（Electron）与 `android/`（Capacitor）属于 M4，**尚未开始** ——
-所以本轮发布的是浏览器版：整个 `web/` 目录，双击即用。
+`web/` 是唯一真身：桌面端只是把它装进一个壳，多给了一个「真实文件夹」后端。
+安卓端（Capacitor）尚未开始。
 
 ## 里程碑
 
@@ -80,7 +85,8 @@ MixMark/
 | M2 文件系统（多后端存储、文件树、全文搜索） | ✅ |
 | M3 导出与打磨（单文件 HTML、主题体系、查找替换、迁移链路） | ✅ |
 | AI 助手（路线图外，按需求加入） | ✅ |
-| M4 打包（Electron / Capacitor） | ⬜ 未开始 |
+| M4 打包 · 桌面端（Electron + NSIS 安装器，文档真实落盘） | ✅ |
+| M4 打包 · 安卓端（Capacitor APK） | ⬜ 未做 |
 
 ## 开发者命令
 
@@ -92,6 +98,18 @@ npm.cmd run serve      # 起本地静态服务器（Tier B，可启用完整存�
 ```
 
 > 日常改 `web/js`、`web/css` 后直接刷新浏览器即可，**不需要任何构建**。
+
+### 打包桌面端
+
+```powershell
+cd desktop
+npm.cmd install        # 仅首次
+npm.cmd run build      # copy-web 同步 web/ → app/，再 electron-builder 出安装器
+npm.cmd run check-fs   # 磁盘层自测（纯 Node，不启动 Electron）
+```
+
+产物在 `desktop/release/MixMark-<版本>-Setup.exe`。
+调试时也可以 `npm.cmd start`，或带上 `--library <文件夹>` 启动即连。
 
 ## 冒烟测试
 

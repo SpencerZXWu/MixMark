@@ -13,6 +13,15 @@ release/
 desktop/release/
 desktop/out/
 
+# 桌面端图标：虽然是 make-icon.ps1 生成出来的，但它是**打包必需的输入**
+# （母图在 docs/images/icon.png），所以单独放行 —— 跟 web/vendor/ 一个道理
+!desktop/build/
+!desktop/build/**
+
+# 桌面端把 web/ 拷进来的暂存目录：web/ 才是真源，别提交两份
+desktop/app/
+desktop/node_modules/
+
 # 安卓构建产物
 android/.gradle/
 android/build/

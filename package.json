@@ -1,8 +1,8 @@
 {
   "name": "mixmark",
-  "version": "0.5.26",
+  "version": "0.6.0",
   "private": true,
-  "description": "MixMark — 极简 Markdown 文档编辑器（浏览器优先 / 本地优先）",
+  "description": "MixMark — 极简 Markdown 文档编辑器（浏览器优先 / 本地优先 / 桌面端真实文件夹）",
   "author": "MixMark",
   "license": "MIT",
   "scripts": {

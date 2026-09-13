@@ -24,9 +24,14 @@
 ### 3. 存储分级
 ```
 Electron → Capacitor → FSA → IndexedDB → localStorage
-（M4 实现）  （M4）   （✅ M2）  （✅ M2）    （✅ 兜底）
+（✅ M4）    （未做）  （✅ M2）  （✅ M2）    （✅ 兜底）
 ```
 UI 层**永远不直接调用平台 API**，只走 `MM.provider.get()`。
+
+桌面端这边多一条约定：**磁盘层不许 `require('electron')`**。
+`desktop/lib/library-fs.js` 是纯 Node 的，所以能脱离壳单测
+（`desktop/tools/check-fs.js`，42 项）—— 一个只在 Electron 里跑得起来的
+文件系统层，等于每次改动都只能靠点界面去验。
 
 两条容易踩的规矩：
 - **能用 ≠ 现在可用。** 选路模块先对所有候选者调 `prepare()`（异步，允许它去读回状态），
@@ -114,6 +119,15 @@ UI 层**永远不直接调用平台 API**，只走 `MM.provider.get()`。
 npm.cmd run vendor    # 重建 web/vendor（仅升级依赖时）
 npm.cmd run check     # 全量检查：JS 语法 + CSS 注释/花括号配对，改完必跑
 npm.cmd run serve     # 本地静态服务器（Tier B 环境，可测 IndexedDB / FSA）
+
+# 桌面端（在 desktop/ 里跑）
+npm.cmd install       # 仅首次
+npm.cmd run check-fs  # 磁盘层自测：纯 Node，不启动 Electron（先跑这个）
+npm.cmd run build     # copy-web（web/ → app/）+ electron-builder → 安装器
+npm.cmd run build:dir # 只出 release/win-unpacked，不出安装器（快）
+
+# 调试桌面端（--library 启动即连，也是唯一能脚本化的入口，见坑 39）
+.\node_modules\electron\dist\electron.exe . --library "D:\笔记" --remote-debugging-port=9333
 
 # 冒烟测试（含三个关键风险验证，长期保留作回归用例）
 #   直接双击打开 → tools/experiments/m1-smoke.html
@@ -363,6 +377,63 @@ npm.cmd run serve     # 本地静态服务器（Tier B 环境，可测 IndexedDB
     `-` / `#` / `**` 这些记号的标签。两者别混。
     教训：给某个 tag 上色前，先在浏览器里量一下它到底盖住了哪些文字，
     别照着名字猜。
+
+34. **「正文先落盘、索引后写」会让文件名丢掉标题**
+    库层的写入顺序是「先写正文、后写索引」—— 这个顺序本身是对的
+    （索引写失败时不会留下一打开就空白的文档）。但磁盘层要按标题定文件名，
+    而那一刻索引里还没有这条，于是退回用 id 命名，用户的文件夹里就出现
+    一堆 `dmtz9d5xo3lx56.md`。
+
+    修法：给 `set()` 加一个**可选的第三参 meta**，磁盘层先查索引、
+    查不到就用调用方带过来的那份。其他后端忽略这个参数即可。
+    教训：只要「写正文」这个动作依赖索引里的信息，就得把那份信息显式传下去，
+    不能指望它已经在索引里。
+
+35. **文件名后缀别写死**
+    `fileNameFor` 原来固定拼 `.md`，结果收编进来的 `.txt` 一被对齐就改名成 `.md`。
+    现在后缀跟着 `format` 走。注意这是两处改动：推导后缀要改，
+    **收编时也得把格式记进索引** —— 只改前者，下次对齐又会被索引里的旧值改回去。
+
+36. **结构变化后要主动触发一次磁盘对齐，删除路径最容易被漏掉**
+    改名 / 换文件夹 / 删除之后，磁盘上的 `.md` 不会自己跟着走。
+    库层的 create / rename / moveDoc / moveFolder / remove / renameFolder /
+    removeFolder 末尾都调一次 `alignDisk()`，它是**可选调用**
+    （`typeof backend.sync === 'function'`），浏览器那几个后端没有这一步，跳过即可。
+
+    漏掉删除路径的后果特别隐蔽：文件删了，**空目录留在磁盘上**，
+    界面上完全看不出来 —— 得 `Get-ChildItem -Recurse` 才看得见。
+
+37. **Windows 上第一次打包会卡在 winCodeSign 的符号链接**
+    报 `Cannot create symbolic link : ...\darwin\10.12\lib\libcrypto.dylib`
+    —— electron-builder 的 `winCodeSign` 包里带了两个 macOS 符号链接，
+    解压它们需要管理员权限或开发者模式，而它们跟 Windows 打包毫无关系。
+    手动铺缓存即可（跳过 `darwin`）：
+    ```powershell
+    $za = 'desktop\node_modules\7zip-bin\win\x64\7za.exe'
+    & $za x "$env:LOCALAPPDATA\electron-builder\Cache\winCodeSign\<hash>.7z" `
+         "-o$env:LOCALAPPDATA\electron-builder\Cache\winCodeSign\winCodeSign-2.6.0" `
+         -x!darwin -y
+    ```
+    目录名必须是 `winCodeSign-2.6.0`（app-builder 按「名字-版本」找），
+    里面补齐 `rcedit-x64.exe` 与 `windows-10\x64\signtool.exe` 就算成。
+
+38. **杀终端 ≠ 杀应用**
+    `kill_terminal` 只结束 PowerShell，Electron 的子进程会留着继续跑，
+    占着 `--remote-debugging-port` 和单实例锁 —— 下次启动会**静默直接退出**，
+    日志里只有一行 `bind() returned an error`。
+
+    检测残留时别刚 `Stop-Process` 就下结论：那一瞬间 `Get-Process` 还能看到
+    "终止中"的进程，而 `taskkill` 反而会说 not found。要么查两次，要么直接换端口。
+
+39. **桌面端唯一能脚本化的入口是命令行参数**
+    「选文件夹」的系统对话框没法自动点，所以「连上 → 读 → 写 → 落盘」这条链路
+    本来根本验不了。加了 `--library <文件夹>`（本身就是有用功能：快捷方式带路径）
+    之后，配合 `--remote-debugging-port` + CDP 就能把整条链路跑一遍：
+    启动 → 问状态 → 建文档 → 看磁盘上有没有那个文件、叫什么名字。
+
+    这一步立刻抓出三个只在「真跑起来」时才显形的问题（id 当文件名、
+    `.txt` 被改名、空目录残留）—— 全靠浏览器端自测一个都发现不了。
+    以后凡是「多端/多环境」的改动，都先想一下有没有可脚本化的入口。
 
 ## 六、术语
 

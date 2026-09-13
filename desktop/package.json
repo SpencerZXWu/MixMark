@@ -1,0 +1,58 @@
+{
+  "name": "mixmark-desktop",
+  "version": "0.6.0",
+  "private": true,
+  "description": "MixMark 桌面端 —— 把文档真的存进你自己的文件夹",
+  "author": "Spencer Wu",
+  "license": "MIT",
+  "main": "main.js",
+  "scripts": {
+    "copy-web": "node tools/copy-web.js",
+    "check-fs": "node tools/check-fs.js",
+    "start": "node tools/copy-web.js && electron .",
+    "build:dir": "node tools/copy-web.js && electron-builder --win --dir",
+    "build": "node tools/copy-web.js && electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.spencerzxwu.mixmark",
+    "productName": "MixMark",
+    "copyright": "MixMark",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "lib/**/*",
+      "app/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "MixMark-${version}-Setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "MixMark",
+      "uninstallDisplayName": "MixMark",
+      "deleteAppDataOnUninstall": false
+    }
+  }
+}

@@ -759,7 +759,16 @@
       group: 'app',
       run: function (kind) {
         if (!kind || kind === MM.provider.getKind()) return;
-        return adopt(kind);
+        return adopt(kind).catch(function (err) {
+          // 「切过去也不能用」的情形必须发出声来。切换失败又静默，
+          // 用户会以为已经在用新存储了
+          var msg = String((err && err.message) || err);
+          if (msg.indexOf('unavailable:') === 0) {
+            MM.toast.danger(MM.i18n.t('storageUnavailable', { name: kind }));
+            return;
+          }
+          MM.toast.danger(MM.i18n.t('desktopFailed', { msg: msg }));
+        });
       }
     },
 
@@ -768,6 +777,27 @@
       titleKey: 'cmdPickFolder',
       group: 'app',
       run: function () {
+        // 桌面端：真正的文件夹由主进程的对话框选，路径是个字符串，
+        // 不需要浏览器那套「句柄 + 权限」的麻烦事
+        var desk = MM.desktopBridge;
+        if (desk && desk.available()) {
+          return desk
+            .pickRoot()
+            .then(function (root) {
+              // 对话框被取消时桥会抛 AbortError（下面吞掉），但万一哪天
+              // 换成返回 null，也不能就这么往下走去切后端 ——
+              // 切到一个空的 electron 库，看起来就像数据全丢了
+              if (!root) return null;
+              return adopt('electron').then(function () {
+                MM.toast.ok(MM.i18n.t('toastFolderConnected', { name: desk.status().name || '' }));
+              });
+            })
+            .catch(function (err) {
+              if (err && err.name === 'AbortError') return; // 用户取消，不是错误
+              MM.toast.danger(MM.i18n.t('desktopFailed', { msg: (err && err.message) || err }));
+            });
+        }
+
         var fsa = fsaProvider();
         if (!fsa || !fsa.supported()) {
           MM.toast.danger(MM.i18n.t('fsaUnsupported'));

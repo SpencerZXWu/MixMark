@@ -104,18 +104,39 @@
     }
 
     function write(id, content) {
-      return backend.set('doc:' + id, content).then(function () {
-        return readJson('docs').then(function (docs) {
-          for (var i = 0; i < docs.length; i++) {
-            if (docs[i].id === id) {
-              docs[i].mtime = Date.now();
-              docs[i].size = content.length;
-              break;
-            }
+      // 先读索引再写正文：正文这一段会先落盘，后端得靠标题才能定文件名，
+      // 所以把 meta 一并交过去（原生后端用不上，桌面端后端需要）
+      return readJson('docs').then(function (docs) {
+        var meta = null;
+        for (var i = 0; i < docs.length; i++) {
+          if (docs[i].id === id) {
+            meta = docs[i];
+            docs[i].mtime = Date.now();
+            docs[i].size = content.length;
+            break;
           }
+        }
+        return backend.set('doc:' + id, content, meta).then(function () {
           return writeJson('docs', docs);
         });
       });
+    }
+
+    /**
+     * 结构变化（新建 / 改名 / 移动）之后调一次，让后端把镜像文件搬到该在的位置。
+     *
+     * 只有桌面端后端提供 sync —— 浏览器那几个后端的「文件在哪」用户看不见，
+     * 压根没有对齐这回事。所以这是可选能力，后端没实现就当无事发生。
+     */
+    function alignDisk() {
+      if (typeof backend.sync !== 'function') return Promise.resolve();
+      return Promise.resolve()
+        .then(function () {
+          return backend.sync();
+        })
+        .catch(function (err) {
+          console.warn('[library] 磁盘对齐失败', err);
+        });
     }
 
     function create(opts) {
@@ -137,13 +158,17 @@
       };
 
       return backend
-        .set('doc:' + id, content)
+        // meta 作为第三参：此刻索引里还没有它，后端靠它才能把文件命名成标题
+        .set('doc:' + id, content, meta)
         .then(function () {
           return readJson('docs');
         })
         .then(function (docs) {
           docs.push(meta);
           return writeJson('docs', docs);
+        })
+        .then(function () {
+          return alignDisk();
         })
         .then(function () {
           return meta;
@@ -157,18 +182,23 @@
     }
 
     function rename(id, title) {
-      return readJson('docs').then(function (docs) {
-        for (var i = 0; i < docs.length; i++) {
-          if (docs[i].id === id) {
-            docs[i].title = title;
-            // 手动改名后不再自动跟随 H1
-            docs[i].autoTitle = false;
-            docs[i].mtime = Date.now();
-            break;
+      return readJson('docs')
+        .then(function (docs) {
+          for (var i = 0; i < docs.length; i++) {
+            if (docs[i].id === id) {
+              docs[i].title = title;
+              // 手动改名后不再自动跟随 H1
+              docs[i].autoTitle = false;
+              docs[i].mtime = Date.now();
+              break;
+            }
           }
-        }
-        return writeJson('docs', docs);
-      });
+          return writeJson('docs', docs);
+        })
+        // 磁盘上的 .md 也得跟着改名，否则用户看到的是「界面改了、文件没改」
+        .then(function () {
+          return alignDisk();
+        });
     }
 
     /** 只更新元数据（自动标题跟随、拖拽移动都用它，不标记为手动改名） */
@@ -185,16 +215,23 @@
     }
 
     function remove(id) {
-      return backend.remove('doc:' + id).then(function () {
-        return readJson('docs').then(function (docs) {
+      return backend
+        .remove('doc:' + id)
+        .then(function () {
+          return readJson('docs');
+        })
+        .then(function (docs) {
           return writeJson(
             'docs',
             docs.filter(function (d) {
               return d.id !== id;
             })
           );
+        })
+        // 删掉后可能腾空了某个目录，顺手扫一遍（后端的 sync 会清空壳）
+        .then(function () {
+          return alignDisk();
         });
-      });
     }
 
     /* ---------------- 文件夹 ---------------- */
@@ -226,19 +263,24 @@
     }
 
     function renameFolder(id, name) {
-      return readJson('folders').then(function (folders) {
-        var hit = false;
-        for (var i = 0; i < folders.length; i++) {
-          if (folders[i].id === id) {
-            folders[i].name = name;
-            folders[i].mtime = Date.now();
-            hit = true;
-            break;
+      return readJson('folders')
+        .then(function (folders) {
+          var hit = false;
+          for (var i = 0; i < folders.length; i++) {
+            if (folders[i].id === id) {
+              folders[i].name = name;
+              folders[i].mtime = Date.now();
+              hit = true;
+              break;
+            }
           }
-        }
-        if (!hit) return Promise.reject(new Error('not-found'));
-        return writeJson('folders', folders);
-      });
+          if (!hit) return Promise.reject(new Error('not-found'));
+          return writeJson('folders', folders);
+        })
+        // 目录名也得改，否则磁盘上还是旧文件夹名
+        .then(function () {
+          return alignDisk();
+        });
     }
 
     function folderStats(id) {
@@ -291,6 +333,12 @@
           })
           .then(function () {
             return { docs: docs.length - kept.length, folders: Object.keys(doomed).length };
+          })
+          // 子树全删完后，磁盘上的空目录也该跟着消失
+          .then(function (res) {
+            return alignDisk().then(function () {
+              return res;
+            });
           });
       });
     }
@@ -325,7 +373,9 @@
             break;
           }
         }
-        return writeJson('folders', folders);
+        return writeJson('folders', folders).then(function () {
+          return alignDisk();
+        });
       });
     }
 
@@ -345,7 +395,9 @@
           }
         }
         if (!hit) return Promise.reject(new Error('not-found'));
-        return writeJson('docs', docs);
+        return writeJson('docs', docs).then(function () {
+          return alignDisk();
+        });
       });
     }
 
