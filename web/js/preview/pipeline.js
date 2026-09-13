@@ -277,8 +277,27 @@
       if (!html) continue;
 
       var extraClass = token.type === 'table' ? ' mm-block--table' : '';
+
+      /* data-line-end = 这一块在源码里占的最后一行。
+       *
+       * 不能拿「raw 里的换行数 - 1」去推。marked 给的 raw **尾部带不带换行
+       * 并不确定**（最后一块、以及某些块类型就不带），两种情况下那个式子
+       * 必然有一种算短一行 —— 于是代码块会丢掉闭合围栏（图表就再也不是
+       * ```mermaid 了，反向修改认不出它），任务列表会丢掉最后一条。
+       *
+       * 改成先剥掉尾部的换行、再数里面剩下几个换行：那个数就是块内容
+       * 跨了几行，与尾部带不带换行无关。
+       */
+      var body = raw.replace(/\n+$/, '');
+      var innerBreaks = body.match(/\n/g);
+      var endLine = startLine + (innerBreaks ? innerBreaks.length : 0);
+
       parts.push(
-        '<div class="mm-block' + extraClass + '" data-line="' + startLine + '">' + html + '</div>'
+        '<div class="mm-block' + extraClass + '"' +
+          ' data-line="' + startLine + '"' +
+          ' data-line-end="' + endLine + '">' +
+          html +
+          '</div>'
       );
       blockCount++;
     }
@@ -289,7 +308,7 @@
     var clean = joined;
     if (window.DOMPurify) {
       clean = window.DOMPurify.sanitize(normalizeLocalPaths(joined), {
-        ADD_ATTR: ['data-line', 'data-lang', 'target'],
+        ADD_ATTR: ['data-line', 'data-line-end', 'data-lang', 'target'],
         ALLOW_DATA_ATTR: true,
         /* 只禁真正有风险的类型。
            注意不要把 input 写进来 —— marked 的 GFM 任务列表就是靠
@@ -423,6 +442,15 @@
   var MERMAID_SRC = 'vendor/mermaid.bundle.js';
   var mermaidPromise = null;
   var mermaidTheme = null;
+
+  /**
+   * 「挂起」标记：反向修改期间不让渲染重建 DOM。
+   *
+   * 用户在预览里打字，每敲一下都会写回源码，而源码变化会触发重新渲染 ——
+   * 那一重建就把正在编辑的 DOM（连同光标）整个换掉了，字根本没法打。
+   * 所以编辑期间只写源码不重建，光标落回源码区时再对齐一次。
+   */
+  var hold = false;
 
   /**
    * 按需读 mermaid。
@@ -567,9 +595,15 @@
 
   /**
    * 立即渲染一版。返回渲染统计，供大文档降级判断与调试使用。
+   *
+   * force 为真时无视 hold —— 切文档这类必须重建的场景用得上。
    */
-  function renderNow(src) {
+  function renderNow(src, force) {
     if (!container) return null;
+    if (hold && !force) {
+      lastSrc = src;
+      return null;
+    }
 
     var started = performance.now();
     var result = renderHtml(src);
@@ -593,6 +627,9 @@
   /** 防抖渲染。编辑器每次敲键都会调用这里，所以必须便宜。 */
   function schedule(src) {
     lastSrc = src;
+    // 反向修改进行中：预览 DOM 里正躺着用户的光标，这一版不能重建。
+    // 源码已经改好了，等用户离开那一块再一次性对齐。
+    if (hold) return;
     if (renderTimer) clearTimeout(renderTimer);
     renderTimer = setTimeout(function () {
       renderTimer = null;
@@ -614,7 +651,26 @@
   MM.preview = {
     mount: mount,
     schedule: schedule,
-    renderNow: renderImmediate,
+    renderNow: renderNow,
+    /** 只重建、不重算（内部用） */
+    renderImmediate: renderImmediate,
+
+    /**
+     * 挂起 / 解除挂起渲染。
+     *
+     * 反向修改期间必须挂起：用户的光标正躺在预览 DOM 里，一重建就没了。
+     * 解除时立即对齐一版 —— 期间源码改了好几次，现在一次算清。
+     */
+    setHold: function (on) {
+      var next = !!on;
+      if (next === hold) return;
+      hold = next;
+      if (!hold && lastSrc) renderImmediate(lastSrc);
+    },
+    isHeld: function () {
+      return hold;
+    },
+
     /** 供冒烟测试使用 */
     _renderHtml: renderHtml
   };

@@ -629,6 +629,19 @@
         }
       },
       {
+        id: 'view.liveEdit',
+        titleKey: 'cmdLiveEdit',
+        group: 'view',
+        /**
+         * 反向修改要让预览区看得见才有意义，所以编辑模式下先切到分栏。
+         * 不必额外禁用它 —— 命令面板里搜到一个点了没反应的项更让人迷惑。
+         */
+        run: function () {
+          MM.liveEdit.toggle();
+          if (MM.liveEdit.isOn() && MM.store.get().mode === 'edit') setMode('split');
+        }
+      },
+      {
         id: 'view.sidebar',
         titleKey: 'cmdToggleSidebar',
         group: 'view',
@@ -715,6 +728,22 @@
     initSidebarSplitter();
     initBrandIntro();
 
+    // 反向修改（实验性）：把预览容器交给它，模式默认是关的
+    MM.liveEdit.init(els.preview);
+
+    /* ---- 反向修改开关 ---- */
+    els.liveEditBtn = document.getElementById('btn-live-edit');
+    if (els.liveEditBtn) {
+      els.liveEditBtn.addEventListener('click', function () {
+        MM.commands.run('view.liveEdit');
+      });
+    }
+    MM.bus.on('liveedit:changed', function (p) {
+      if (!els.liveEditBtn) return;
+      els.liveEditBtn.classList.toggle('is-active', !!p.on);
+      els.liveEditBtn.setAttribute('aria-pressed', p.on ? 'true' : 'false');
+    });
+
     /* ---- 顶栏视图切换 ---- */
     if (els.viewSwitch) {
       els.viewSwitch.addEventListener('click', function (e) {
@@ -762,7 +791,9 @@
 
     MM.bus.on('doc:opened', function (payload) {
       MM.editor.setContent(payload.content);
-      MM.preview.renderNow(payload.content);
+      // 换文档必须重建：force 无视反向修改的挂起标记 ——
+      // 留着上一份文档的 DOM 就不是“挂起”，是错的
+      MM.preview.renderNow(payload.content, true);
       updatePreviewEmpty(payload.content);
       MM.scrollSync.refresh();
 

@@ -1174,3 +1174,340 @@ kbd.mm-kbd {
 .repo-menu__action:hover {
   background: var(--mm-accent-weak);
 }
+
+/* ==========================================================================
+   反向修改（实验性）
+   --------------------------------------------------------------------------
+   两块东西：
+     1. .live-bar   预览面板顶部的功能栏（只在反向修改模式下出现）
+     2. 预览块的「可编辑」观感
+   ========================================================================== */
+
+.live-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--mm-sp-2);
+  padding: var(--mm-sp-2) var(--mm-sp-3);
+  background: var(--mm-bg-sub);
+  border-bottom: 1px solid var(--mm-border);
+  font-family: var(--mm-font-ui);
+  font-size: var(--mm-fs-sm);
+  flex: none;
+}
+
+/* 作者样式优先于 UA 样式，所以 [hidden] 必须自己补一条，否则 display:flex 压着它 */
+.live-bar[hidden] {
+  display: none;
+}
+
+.live-bar__title {
+  color: var(--mm-accent);
+  font-weight: var(--mm-weight-bold);
+  margin-right: var(--mm-sp-1);
+}
+
+.live-bar__group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* 组之间画一道竖线，省得按钮连成一片看不出分组 */
+.live-bar__group + .live-bar__group {
+  margin-left: var(--mm-sp-2);
+  padding-left: var(--mm-sp-2);
+  border-left: 1px solid var(--mm-border);
+}
+
+.live-bar__spacer {
+  flex: 1;
+}
+
+.live-bar__btn {
+  min-width: 26px;
+  height: 24px;
+  padding: 0 var(--mm-sp-2);
+  border: 1px solid transparent;
+  border-radius: var(--mm-radius-sm);
+  background: transparent;
+  color: var(--mm-text-2);
+  font-family: inherit;
+  font-size: var(--mm-fs-sm);
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--mm-dur-fast) var(--mm-ease), color var(--mm-dur-fast) var(--mm-ease);
+}
+
+.live-bar__btn:hover {
+  background: var(--mm-surface-2);
+  color: var(--mm-text-1);
+}
+
+.live-bar__btn--wide {
+  min-width: auto;
+}
+
+.live-bar__btn--exit {
+  color: var(--mm-accent);
+  border-color: var(--mm-accent-ring);
+}
+
+.live-bar__btn--exit:hover {
+  background: var(--mm-accent-weak);
+}
+
+/* ---- 预览块的可编辑观感 ---- */
+
+.mm-block[contenteditable] {
+  outline: none;
+  border-radius: var(--mm-radius-sm);
+  /* 用负外边距把内边距补回来，免得加了 padding 之后正文左右位置跳动 */
+  padding: 2px var(--mm-sp-2);
+  margin-left: calc(var(--mm-sp-2) * -1);
+  margin-right: calc(var(--mm-sp-2) * -1);
+  transition: background var(--mm-dur-fast) var(--mm-ease);
+}
+
+.mm-block[contenteditable]:hover {
+  background: color-mix(in srgb, var(--mm-surface-2) 60%, transparent);
+}
+
+.mm-block[contenteditable]:focus {
+  background: var(--mm-surface-2);
+  box-shadow: inset 0 0 0 1px var(--mm-accent-ring);
+}
+
+/* 图表块进来不打字，点它是开面板 */
+.mm-block--diagram {
+  cursor: pointer;
+}
+
+.mm-block--diagram:hover .mm-mermaid {
+  border-color: var(--mm-accent-ring);
+}
+
+/* ==========================================================================
+   图表面板
+   ========================================================================== */
+
+.dg-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 320px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background: var(--mm-bg);
+  border-left: 1px solid var(--mm-border);
+  box-shadow: var(--mm-shadow-lg);
+  font-family: var(--mm-font-ui);
+  font-size: var(--mm-fs-sm);
+}
+
+.dg-panel[hidden] {
+  display: none;
+}
+
+.dg-panel__head {
+  display: flex;
+  align-items: center;
+  gap: var(--mm-sp-2);
+  padding: var(--mm-sp-3);
+  border-bottom: 1px solid var(--mm-border);
+  flex: none;
+}
+
+.dg-panel__title {
+  font-weight: var(--mm-weight-bold);
+  color: var(--mm-text-1);
+}
+
+.dg-panel__type {
+  color: var(--mm-text-3);
+}
+
+.dg-panel__close {
+  margin-left: auto;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: var(--mm-radius-sm);
+  background: transparent;
+  color: var(--mm-text-2);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.dg-panel__close:hover {
+  background: var(--mm-surface-2);
+  color: var(--mm-text-1);
+}
+
+.dg-panel__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--mm-sp-2) var(--mm-sp-3) var(--mm-sp-6);
+}
+
+.dg-section {
+  padding: var(--mm-sp-3) 0;
+  border-bottom: 1px solid var(--mm-border);
+}
+
+.dg-section:last-child {
+  border-bottom: none;
+}
+
+.dg-section__head {
+  display: flex;
+  align-items: center;
+  gap: var(--mm-sp-2);
+}
+
+.dg-section__title {
+  margin: 0;
+  font-size: var(--mm-fs-sm);
+  font-weight: var(--mm-weight-bold);
+  color: var(--mm-text-2);
+  letter-spacing: 0.02em;
+}
+
+.dg-section__head .dg-section__title {
+  flex: 1;
+}
+
+.dg-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mm-sp-2);
+  margin-top: var(--mm-sp-2);
+}
+
+.dg-item {
+  padding: var(--mm-sp-2);
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-sm);
+  background: var(--mm-bg-sub);
+}
+
+.dg-item--active {
+  border-color: var(--mm-accent);
+  box-shadow: 0 0 0 1px var(--mm-accent-ring);
+}
+
+.dg-item__top {
+  display: flex;
+  align-items: center;
+  gap: var(--mm-sp-1);
+}
+
+.dg-item__top > .dg-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.dg-item--edge .dg-item__top > .dg-input {
+  flex: 1 1 0;
+}
+
+.dg-field {
+  display: flex;
+  align-items: center;
+  gap: var(--mm-sp-2);
+  margin-top: var(--mm-sp-2);
+}
+
+.dg-field__label {
+  flex: none;
+  width: 68px;
+  color: var(--mm-text-3);
+}
+
+.dg-field > .dg-input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 成员 / 属性这类多行内容，标签挪到上面去，否则输入框被挤成一条缝 */
+.dg-field:has(> .dg-input--area) {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--mm-sp-1);
+}
+
+.dg-input {
+  height: 26px;
+  padding: 0 var(--mm-sp-2);
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-sm);
+  background: var(--mm-bg);
+  color: var(--mm-text-1);
+  font-family: inherit;
+  font-size: var(--mm-fs-sm);
+  min-width: 0;
+}
+
+.dg-input:focus {
+  outline: none;
+  border-color: var(--mm-accent);
+  box-shadow: 0 0 0 2px var(--mm-accent-ring);
+}
+
+.dg-input--area {
+  height: auto;
+  padding: var(--mm-sp-2);
+  font-family: var(--mm-font-mono, ui-monospace, Consolas, monospace);
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.dg-btn {
+  flex: none;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 var(--mm-sp-2);
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-sm);
+  background: var(--mm-bg);
+  color: var(--mm-text-2);
+  font-family: inherit;
+  font-size: var(--mm-fs-sm);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.dg-btn:hover {
+  background: var(--mm-surface-2);
+  color: var(--mm-text-1);
+}
+
+.dg-btn--ghost {
+  border-color: transparent;
+  color: var(--mm-accent);
+  background: transparent;
+}
+
+.dg-btn--ghost:hover {
+  background: var(--mm-accent-weak);
+}
+
+.dg-btn--danger {
+  border-color: transparent;
+  background: transparent;
+  color: var(--mm-text-3);
+}
+
+.dg-btn--danger:hover {
+  background: var(--mm-danger-weak);
+  color: var(--mm-danger);
+}
+
+.dg-hint {
+  margin: var(--mm-sp-2) 0 0;
+  color: var(--mm-text-3);
+  line-height: 1.6;
+}

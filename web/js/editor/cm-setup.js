@@ -309,6 +309,51 @@
   }
 
   /**
+   * 用若干行文本替换源码里的第 fromLine..toLine 行（1 起，含两端）。
+   *
+   * 预览区反向修改专用：那边已经靠 data-line 算好了要改哪几行，
+   * 不需要编辑器参与定位。走 dispatch 而不是 setContent —— 后者会清掉
+   * 撤销栈，而在预览里改完字之后按 Ctrl+Z 应该是能撤的。
+   *
+   * 替换范围取「起始行行首 → 结束行行尾」，**不含换行**：
+   * 块与块之间那几个空行不属于任何一块，把换行也圈进去的话，
+   * 每改一次就吃掉一个空行，文档会越改越紧。
+   *
+   * @returns {{delta:number, oldCount:number, newCount:number}|null}
+   *          delta 是行数变化，预览那边靠它平移后续块的 data-line
+   */
+  function replaceLines(fromLine, toLine, text) {
+    if (!view) return null;
+
+    var doc = view.state.doc;
+    var a = Math.max(1, Math.min(fromLine, doc.lines));
+    var b = Math.max(a, Math.min(toLine, doc.lines));
+
+    var from = doc.line(a).from;
+    var to = doc.line(b).to;
+
+    var oldCount = b - a + 1;
+    var newCount = text === '' ? 0 : text.split('\n').length;
+
+    view.dispatch({ changes: { from: from, to: to, insert: text } });
+
+    return { delta: newCount - oldCount, oldCount: oldCount, newCount: newCount };
+  }
+
+  /** 当前源码有几行 */
+  function lineCount() {
+    return view ? view.state.doc.lines : 0;
+  }
+
+  /** 第 n 行（1 起）的文本，越界返回 '' */
+  function lineText(n) {
+    if (!view) return '';
+    var doc = view.state.doc;
+    if (n < 1 || n > doc.lines) return '';
+    return doc.line(n).text;
+  }
+
+  /**
    * 用文本替换选区，并把光标或选区落到指定位置。
    * 「插入后还要用户继续填」的命令需要它（插入链接后选中 URL、
    * 插入表格后把光标放进第一个表头单元格）。
@@ -429,6 +474,10 @@
     toggleLinePrefix: toggleLinePrefix,
     insertBlock: insertBlock,
     insertAndSelect: insertAndSelect,
+
+    replaceLines: replaceLines,
+    lineCount: lineCount,
+    lineText: lineText,
 
     cursorLine: cursorLine,
     topVisibleLine: topVisibleLine,

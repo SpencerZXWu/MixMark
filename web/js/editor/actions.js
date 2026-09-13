@@ -273,4 +273,48 @@
       widget: 'text'
     }
   });
+
+  /* ------------------------------------------------------------------
+     图表
+
+     工具栏上以前没有图表的入口 —— 想画个 UML 得自己敲 ```mermaid，
+     而 mermaid 这个词本身就不像「用户会知道的东西」。
+
+     两条命令分开摆：
+       - 插入：往光标处放一张空白类图（列成员这一步空着，让人自己填）
+       - 编辑：直接在预览里点图也行，这条给「从工具栏进」留的路
+     ------------------------------------------------------------------ */
+
+  fmt(
+    'diagram',
+    'fmtDiagram',
+    '◇',
+    function () {
+      var starter = [
+        'classDiagram',
+        '  class NewClass {',
+        '    +String field',
+        '    +method()',
+        '  }'
+      ].join('\n');
+
+      MM.editor.insertBlock('```mermaid\n' + starter + '\n```');
+
+      // 图表是异步渲染出来的（mermaid 按需加载），等它画完再开面板。
+      // 点「插入」就盼着能马上改名字，多等 300ms 比多按一次鼠标强。
+      setTimeout(function () {
+        MM.diagramPanel.openNearest(null);
+      }, 320);
+    },
+    { order: 42 }
+  );
+
+  MM.commands.register({
+    id: 'format.editDiagram',
+    titleKey: 'cmdEditDiagram',
+    group: 'format',
+    run: function () {
+      MM.diagramPanel.openNearest(MM.liveEdit.activeBlock());
+    }
+  });
 })();
