@@ -1152,19 +1152,22 @@ kbd.mm-kbd {
 
 .repo-menu__foot {
   display: flex;
-  gap: 4px;
+  /* 竖排：三个按钮的文字长短不一（「新建本地仓库」有 6 个字），
+     横排会被挤成两行 */
+  flex-direction: column;
+  gap: 2px;
   padding: 4px;
   border-top: 1px solid var(--mm-border);
 }
 
 .repo-menu__action {
-  flex: 1;
-  padding: 7px 8px;
+  padding: 7px 10px;
   border: none;
   border-radius: var(--mm-radius-sm);
   background: transparent;
   color: var(--mm-accent);
   font-size: var(--mm-fs-sm);
+  text-align: left;
   cursor: pointer;
 }
 

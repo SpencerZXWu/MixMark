@@ -88,6 +88,17 @@
 
     var foot = el('div', 'repo-menu__foot');
 
+    // 首页就是仓库列表，给一个直达入口 ——
+    // 否则进了工作区之后，「我建的仓库在哪」只能靠记得点左上角的品牌名
+    var listBtn = el('button', 'repo-menu__action');
+    listBtn.type = 'button';
+    listBtn.textContent = MM.i18n.t('repoAllList');
+    listBtn.addEventListener('click', function () {
+      close();
+      if (MM.home && MM.home.show) MM.home.show();
+    });
+    foot.appendChild(listBtn);
+
     if (MM.desktopBridge && MM.desktopBridge.available()) {
       var add = el('button', 'repo-menu__action');
       add.type = 'button';
@@ -99,9 +110,10 @@
       foot.appendChild(add);
     }
 
+    // 重命名 / 移除在设置页的仓库区
     var manage = el('button', 'repo-menu__action');
     manage.type = 'button';
-    manage.textContent = MM.i18n.t('setReposTitle');
+    manage.textContent = MM.i18n.t('setRepoManage');
     manage.addEventListener('click', function () {
       close();
       MM.commands.run('app.settings');

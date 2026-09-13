@@ -464,6 +464,31 @@ npm.cmd run build:dir # 只出 release/win-unpacked，不出安装器（快）
     长出这个元数据目录，拿仓库（或它上层的任何目录）当库时，它会被
     `git add -A` 一起提交进去 —— 本项目就这幺误提交过一次 11184 行。
 
+41. **桌面端自测会直接写进用户的真实数据里**
+    `%APPDATA%\mixmark-desktop` 是**用户的**数据（localStorage 里的仓库登记与文档、
+    `desktop.json` 里的上次连接）。用 CDP 跑自测脚本时，任何一次
+    `MM.reposOps.enter()` / `MM.repos.add()` 都会真的改到它 ——
+    本项目已经因此把用户的「当前仓库」切走过一次，还往他的列表里塞了一个
+    临时文件夹。
+
+    指望 `--user-data-dir` 隔离是**没用的**：实测传了它，localStorage 照样
+    读到了用户已有的仓库（`app.getPath('userData')` 仍是默认值）。
+    要真正隔离，只能在主进程 `ready` 之前 `app.setPath('userData', ...)`，
+    而那是改产品代码。
+
+    所以规矩是：
+    - 能不在桌面端测的就别在桌面端测。`npm run serve` 换个端口就是另一个
+      origin，localStorage 天然隔离（端口不同即不同源），零风险。
+    - 非要在桌面端测，先 `Copy-Item` 一份 `%APPDATA%\mixmark-desktop` 到临时目录，
+      测完再覆盖回去；脚本里**只读**优先，写操作明确列出来。
+    - 测试用的 `--library` 目录别用真实笔记文件夹，用 `$env:TEMP` 下的。
+
+42. **`app.getPath()` 在模块顶层就求值了**
+    `main.js` 里 `const CONFIG_FILE = path.join(app.getPath('userData'), ...)`
+    这样的写法意味着**之后**再改 `userData` 也没用，路径已经定死了。
+    要支持「换个数据目录」这类开关，得让路径变成函数现算，或者保证
+    `setPath` 发生在模块加载之前。
+
 ## 六、术语
 
 | 词 | 含义 |
