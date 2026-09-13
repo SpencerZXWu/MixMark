@@ -473,6 +473,21 @@
      初始化
      ------------------------------------------------------------------ */
 
+  /** 侧栏最上面那行：当前仓库的名字 + 地址 */
+  function renderRepoSwitch() {
+    if (!els.repoName || !MM.repos) return;
+
+    var repo = MM.repos.current();
+    if (!repo) {
+      els.repoName.textContent = '';
+      els.repoPath.textContent = '';
+      return;
+    }
+
+    els.repoName.textContent = MM.repos.labelOf(repo);
+    els.repoPath.textContent = MM.repos.pathOf(repo);
+  }
+
   function init() {
     if (initialized) return;
     initialized = true;
@@ -486,6 +501,23 @@
     els.newDocBtn = document.getElementById('btn-new-doc');
     els.newFolderBtn = document.getElementById('btn-new-folder');
     els.pickFolderBtn = document.getElementById('btn-pick-folder');
+
+    // 侧栏第一行是「当前仓库」—— 它决定了下面这棵树是谁的，点一下就能换
+    els.repoBtn = document.getElementById('repo-switch');
+    els.repoName = document.getElementById('repo-switch-name');
+    els.repoPath = document.getElementById('repo-switch-path');
+
+    if (els.repoBtn) {
+      els.repoBtn.addEventListener('click', function () {
+        MM.repoMenu.toggle(els.repoBtn);
+      });
+      MM.bus.on('repo:changed', renderRepoSwitch);
+      MM.bus.on('repo:list', renderRepoSwitch);
+      MM.settings.onChange(function (s, changed) {
+        if (changed.indexOf('locale') !== -1) renderRepoSwitch();
+      });
+    }
+    renderRepoSwitch();
 
     MM.search.init();
 

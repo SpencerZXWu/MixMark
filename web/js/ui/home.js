@@ -1,13 +1,16 @@
 /**
- * MixMark · 首页
+ * MixMark · 首页（仓库列表）
  * ===============================================================
- * 第一次打开应用先落到这里，让人看清「文档能放在哪」，选一个再进工作区。
- * 之后启动直接进文档库；想回来点左上角的品牌名即可。
+ * 一个仓库 = 一份文档数据 + 一套属于它自己的工作台状态（见 core/repos.js）。
+ * 首页把已有的仓库列成卡片，点一个就进去；「新建本地仓库」走
+ * MM.reposOps.create（选文件夹 → 起名字 → 登记进列表）。
  *
- * 为什么「本地仓库」这一步只给提示、没有真的做：
- * 它需要 File System Access API 才能拿到真实文件夹，而这个 API 在
- * file:// 下（双击 index.html 的用法）被浏览器直接拒绝。
- * 与其给一个点了没反应的按钮，不如把话说清楚 —— 等 M4 桌面版。
+ * 卡片上**同时显示名称和地址**：两个仓库都叫「笔记」时，
+ * 只有那行地址能把它们分开。
+ *
+ * 浏览器里（双击 index.html）选不了真实文件夹，所以那个按钮不显示，
+ * 只留下「本机文档库」一张卡片 —— 与其摆一个点了没反应的按钮，
+ * 不如根本不摆。
  */
 (function () {
   'use strict';
@@ -16,6 +19,7 @@
 
   var app = null;
   var root = null;
+  var listNode = null;
 
   function el(id) {
     return document.getElementById(id);
@@ -27,6 +31,7 @@
 
   function show() {
     if (!app || isHome()) return;
+    render();
     app.classList.add('is-home');
     if (root) root.hidden = false;
   }
@@ -44,6 +49,74 @@
     });
   }
 
+  /* ------------------------------------------------------------------
+     渲染
+     ------------------------------------------------------------------ */
+
+  /** 桌面端才有「选真实文件夹」这回事；浏览器里点了也没反应，就别摆出来 */
+  function canPickFolder() {
+    return !!(MM.desktopBridge && MM.desktopBridge.available());
+  }
+
+  function makeCard(repo) {
+    var node = document.createElement('button');
+    node.type = 'button';
+    node.className = 'repo-card' + (repo.active ? ' is-active' : '');
+    node.setAttribute('data-repo-id', repo.id);
+
+    var name = document.createElement('span');
+    name.className = 'repo-card__name';
+    name.textContent = repo.label;
+
+    var path = document.createElement('span');
+    path.className = 'repo-card__path';
+    path.textContent = repo.store;
+    path.title = repo.store;
+
+    node.appendChild(name);
+    node.appendChild(path);
+
+    if (repo.active) {
+      var badge = document.createElement('span');
+      badge.className = 'repo-card__badge';
+      badge.textContent = MM.i18n.t('repoCurrent');
+      node.appendChild(badge);
+    }
+
+    return node;
+  }
+
+  function render() {
+    if (!listNode || !MM.repos) return;
+
+    listNode.textContent = '';
+    MM.repos.list().forEach(function (repo) {
+      listNode.appendChild(makeCard(repo));
+    });
+
+    var add = el('btn-add-repo');
+    if (add) add.hidden = !canPickFolder();
+  }
+
+  /* ------------------------------------------------------------------
+     交互
+     ------------------------------------------------------------------ */
+
+  function enter(repo) {
+    if (!repo) return;
+    if (repo.id === MM.repos.currentId()) {
+      hide();
+      return;
+    }
+
+    MM.reposOps.enter(repo).then(function (done) {
+      // 切失败（比如文件夹被挪走了）就留在首页 —— 卡片上的「当前」还指着旧库，
+      // 重画一次免得两条都亮着
+      if (done) hide();
+      else render();
+    });
+  }
+
   function bind() {
     // 品牌名：悬停时文案换成「回到首页」（切换样式负责），点击就回来
     var brand = el('brand');
@@ -53,25 +126,24 @@
       });
     }
 
-    var repo = el('btn-create-repo');
-    if (repo) {
-      repo.addEventListener('click', function () {
-        // 桌面端真的能做到这件事 —— 选一个文件夹就是「创建仓库」，
-        // 摆在首页的承诺到这儿才真正允现（浏览器里仍然做不到，说清原因即可）
-        if (MM.desktopBridge && MM.desktopBridge.available()) {
-          MM.commands.run('storage.pickFolder');
-          return;
-        }
-        MM.toast.show(MM.i18n.t('homeRepoSoon'));
+    // 卡片是动态渲染的，用事件委托
+    if (listNode) {
+      listNode.addEventListener('click', function (e) {
+        var node = e.target && e.target.closest ? e.target.closest('.repo-card') : null;
+        if (!node) return;
+        enter(MM.repos.raw(node.getAttribute('data-repo-id')));
       });
     }
 
-    var lib = el('btn-open-library');
-    if (lib) {
-      lib.addEventListener('click', function () {
-        hide();
+    var add = el('btn-add-repo');
+    if (add) {
+      add.addEventListener('click', function () {
+        MM.reposOps.create();
       });
     }
+
+    // 仓库列表变了（新建 / 改名 / 移除）就重画
+    MM.bus.on('repo:list', render);
   }
 
   function init() {
@@ -79,7 +151,9 @@
     root = el('home');
     if (!app || !root) return;
 
+    listNode = el('home-repos');
     bind();
+    render();
 
     if (!MM.settings.get('homeSeen')) {
       // 只在第一次启动停在这儿，之后直接进文档库
@@ -95,6 +169,7 @@
     init: init,
     show: show,
     hide: hide,
+    render: render,
     isHome: isHome
   };
 })();

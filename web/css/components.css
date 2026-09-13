@@ -1070,3 +1070,104 @@ kbd.mm-kbd {
     transform: translateY(6px);
   }
 }
+
+/* --------------------------------------------------------------------------
+   仓库切换浮层
+
+   侧栏顶部那个按钮、状态栏上的仓库名，点的都是它。
+
+   为什么不用原生 select：每一项要同时显示**名字和地址**，而地址可能很长
+   （D:\资料\2026\课程\……），原生下拉放不下，也不给截断。
+
+   位置由 JS 按锚点算，CSS 只负责外观 —— 侧栏按钮和状态栏那一小块宽度
+   差得多，靠 CSS 定位一定会有一边错位。
+   -------------------------------------------------------------------------- */
+.repo-menu {
+  position: fixed;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  max-height: 60vh;
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-lg);
+  background: var(--mm-surface);
+  box-shadow: var(--mm-shadow-lg);
+  overflow: hidden;
+}
+
+.repo-menu__list {
+  overflow: auto;
+  padding: 4px;
+}
+
+.repo-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: var(--mm-radius-sm);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.repo-item:hover {
+  background: var(--mm-surface-2);
+}
+
+.repo-item.is-active {
+  background: var(--mm-accent-weak);
+}
+
+.repo-item__name {
+  font-size: var(--mm-fs-ui);
+  color: var(--mm-text-1);
+  /* 给右上角那个圆点留位置 */
+  padding-right: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.repo-item__path {
+  font-size: var(--mm-fs-sm);
+  color: var(--mm-text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.repo-item__dot {
+  position: absolute;
+  top: 12px;
+  right: 10px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mm-accent);
+}
+
+.repo-menu__foot {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-top: 1px solid var(--mm-border);
+}
+
+.repo-menu__action {
+  flex: 1;
+  padding: 7px 8px;
+  border: none;
+  border-radius: var(--mm-radius-sm);
+  background: transparent;
+  color: var(--mm-accent);
+  font-size: var(--mm-fs-sm);
+  cursor: pointer;
+}
+
+.repo-menu__action:hover {
+  background: var(--mm-accent-weak);
+}

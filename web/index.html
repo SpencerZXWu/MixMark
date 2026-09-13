@@ -12,16 +12,16 @@
      顺序不能变：令牌 → 主题 → 基础 → 布局 → 组件 → 编辑器 → 预览
      后面的文件会用到前面的变量与重置规则。
      ========================================================================== -->
-<link rel="stylesheet" href="vendor/katex/katex.min.css?v=80">
-<link rel="stylesheet" href="css/tokens.css?v=80">
-<link rel="stylesheet" href="css/theme.css?v=80">
-<link rel="stylesheet" href="css/base.css?v=80">
-<link rel="stylesheet" href="css/layout.css?v=80">
-<link rel="stylesheet" href="css/components.css?v=80">
-<link rel="stylesheet" href="css/editor.css?v=80">
-<link rel="stylesheet" href="css/preview.css?v=80">
-<link rel="stylesheet" href="css/home.css?v=80">
-<link rel="stylesheet" href="css/ai.css?v=80">
+<link rel="stylesheet" href="vendor/katex/katex.min.css?v=82">
+<link rel="stylesheet" href="css/tokens.css?v=82">
+<link rel="stylesheet" href="css/theme.css?v=82">
+<link rel="stylesheet" href="css/base.css?v=82">
+<link rel="stylesheet" href="css/layout.css?v=82">
+<link rel="stylesheet" href="css/components.css?v=82">
+<link rel="stylesheet" href="css/editor.css?v=82">
+<link rel="stylesheet" href="css/preview.css?v=82">
+<link rel="stylesheet" href="css/home.css?v=82">
+<link rel="stylesheet" href="css/ai.css?v=82">
 </head>
 <body>
 
@@ -84,6 +84,16 @@
     <!-- 侧栏：折叠时靠宽度过渡，内部固定宽度避免文字重排 -->
     <aside class="sidebar">
       <div class="sidebar__inner">
+        <!-- 当前仓库：点一下弹出仓库列表。
+             放在最上面 —— 它决定了下面这棵树是谁的 -->
+        <button class="repo-switch" id="repo-switch" type="button" data-i18n-title="statusRepoTitle">
+          <span class="repo-switch__text">
+            <span class="repo-switch__name" id="repo-switch-name"></span>
+            <span class="repo-switch__path" id="repo-switch-path"></span>
+          </span>
+          <svg class="repo-switch__caret" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+
         <!-- 浏览器式标签：选中项与下方内容区连成一体（接缝圆角由 CSS 伪元素做） -->
         <div class="sidebar__tabs" id="sidebar-tabs" role="tablist">
           <button type="button" role="tab" data-tab="docs" data-i18n="panelDocs"></button>
@@ -219,7 +229,7 @@
     <span class="statusbar__item" id="status-stats"></span>
     <span class="statusbar__item" id="status-cursor"></span>
     <span class="statusbar__spacer"></span>
-    <span class="statusbar__item" id="status-tier"></span>
+    <span class="statusbar__item statusbar__item--clickable" id="status-repo"></span>
     <span class="statusbar__item">Markdown</span>
   </footer>
 
@@ -232,22 +242,17 @@
       <p class="home__tagline" data-i18n="homeTagline"></p>
     </div>
 
-    <div class="home__cards">
-      <article class="home-card">
-        <h2 class="home-card__title" data-i18n="homeRepoTitle"></h2>
-        <p class="home-card__desc" data-i18n="homeRepoDesc"></p>
-        <button class="home-card__btn" id="btn-create-repo" type="button"
-                data-i18n="homeRepoBtn"></button>
-      </article>
+    <div class="home__repos-block">
+      <h2 class="home__section" data-i18n="homeReposTitle"></h2>
 
-      <article class="home-card">
-        <h2 class="home-card__title" data-i18n="homeLibraryTitle"></h2>
-        <p class="home-card__desc" data-i18n="homeLibraryDesc"></p>
-        <button class="home-card__btn is-primary" id="btn-open-library" type="button"
-                data-i18n="homeLibraryBtn"></button>
-      </article>
+      <!-- 仓库卡片由 home.js 渲染：一张卡片显示名称 + 地址，当前的那个带标记 -->
+      <div class="home__repos" id="home-repos"></div>
+
+      <button class="home-card__btn is-primary" id="btn-add-repo" type="button"
+              data-i18n="homeRepoAdd" hidden></button>
     </div>
 
+    <p class="home__note" data-i18n="homeReposHint"></p>
     <p class="home__note" data-i18n="homeNote"></p>
   </section>
 
@@ -260,79 +265,82 @@
      依赖：全部是本地 IIFE 经典脚本。
      不使用 CDN（要离线可用），不使用 type="module"（file:// 下会被 CORS 拒绝）。
      ========================================================================== -->
-<script src="vendor/marked.js?v=80"></script>
-<script src="vendor/purify.js?v=80"></script>
-<script src="vendor/katex/katex.min.js?v=80"></script>
-<script src="vendor/katex/mhchem.min.js?v=80"></script>
-<script src="vendor/hljs.bundle.js?v=80"></script>
-<script src="vendor/codemirror.bundle.js?v=80"></script>
+<script src="vendor/marked.js?v=82"></script>
+<script src="vendor/purify.js?v=82"></script>
+<script src="vendor/katex/katex.min.js?v=82"></script>
+<script src="vendor/katex/mhchem.min.js?v=82"></script>
+<script src="vendor/hljs.bundle.js?v=82"></script>
+<script src="vendor/codemirror.bundle.js?v=82"></script>
 
 <!-- ==========================================================================
      业务代码：加载顺序即依赖顺序，不可随意调换。
      ========================================================================== -->
 <!-- 1. 基础设施 -->
-<script src="js/i18n.js?v=80"></script>
-<script src="js/core/store.js?v=80"></script>
-<script src="js/core/settings.js?v=80"></script>
-<script src="js/core/commands.js?v=80"></script>
+<script src="js/i18n.js?v=82"></script>
+<script src="js/core/store.js?v=82"></script>
+<script src="js/core/settings.js?v=82"></script>
+<!-- 仓库注册表：文档层要按仓库取工作台状态，必须排在 docs.js 之前 -->
+<script src="js/core/repos.js?v=82"></script>
+<script src="js/core/commands.js?v=82"></script>
 
 <!-- 2. 存储层（顺序要紧：先有 library 工厂，各后端才能建出 provider；
      最后才是选路模块，它要读前面注册好的那几个） -->
-<script src="js/provider/library.js?v=80"></script>
-  <script src="js/provider/localstore.js?v=80"></script>
-  <script src="js/provider/idb.js?v=80"></script>
-  <script src="js/provider/fsa.js?v=80"></script>
-  <script src="js/provider/diskfile.js?v=80"></script>
+<script src="js/provider/library.js?v=82"></script>
+  <script src="js/provider/localstore.js?v=82"></script>
+  <script src="js/provider/idb.js?v=82"></script>
+  <script src="js/provider/fsa.js?v=82"></script>
+  <script src="js/provider/diskfile.js?v=82"></script>
   <!-- 桌面端后端必须在 index.js 之前：选路时它要已在 MM.providers 里 -->
-  <script src="js/provider/electron.js?v=80"></script>
-  <script src="js/provider/index.js?v=80"></script>
+  <script src="js/provider/electron.js?v=82"></script>
+  <script src="js/provider/index.js?v=82"></script>
 
 <!-- 3. 文档 -->
-<script src="js/core/docs.js?v=80"></script>
-<script src="js/core/recovery.js?v=80"></script>
-<script src="js/core/search.js?v=80"></script>
+<script src="js/core/docs.js?v=82"></script>
+<script src="js/core/recovery.js?v=82"></script>
+<script src="js/core/search.js?v=82"></script>
 
 <!-- 4. 编辑器层 -->
-<script src="js/editor/md-syntax.js?v=80"></script>
-<script src="js/editor/math-symbols.js?v=80"></script>
-<script src="js/editor/text-symbols.js?v=80"></script>
-<script src="js/editor/cm-setup.js?v=80"></script>
-<script src="js/editor/math-complete.js?v=80"></script>
-<script src="js/editor/actions.js?v=80"></script>
+<script src="js/editor/md-syntax.js?v=82"></script>
+<script src="js/editor/math-symbols.js?v=82"></script>
+<script src="js/editor/text-symbols.js?v=82"></script>
+<script src="js/editor/cm-setup.js?v=82"></script>
+<script src="js/editor/math-complete.js?v=82"></script>
+<script src="js/editor/actions.js?v=82"></script>
 
 <!-- 5. 预览层 -->
-<script src="js/preview/pipeline.js?v=80"></script>
-<script src="js/preview/line-map.js?v=80"></script>
-<script src="js/preview/scroll-sync.js?v=80"></script>
+<script src="js/preview/pipeline.js?v=82"></script>
+<script src="js/preview/line-map.js?v=82"></script>
+<script src="js/preview/scroll-sync.js?v=82"></script>
 
 <!-- 6. UI 层 -->
-<script src="js/ui/toast.js?v=80"></script>
-<script src="js/ui/dialogs.js?v=80"></script>
-<script src="js/ui/palette.js?v=80"></script>
-<script src="js/ui/menubar.js?v=80"></script>
-<script src="js/ui/find-bar.js?v=80"></script>
-<script src="js/ui/tabs.js?v=80"></script>
-<script src="js/ui/drop-assets.js?v=80"></script>
-<script src="js/ui/symbol-panel.js?v=80"></script>
-<script src="js/ui/outline.js?v=80"></script>
-<script src="js/ui/sidebar.js?v=80"></script>
-<script src="js/ui/statusbar.js?v=80"></script>
-<script src="js/ui/settings-page.js?v=80"></script>
-<script src="js/ui/app-commands.js?v=80"></script>
-<script src="js/ui/home.js?v=80"></script>
-<script src="js/ui/ai-panel.js?v=80"></script>
+<script src="js/ui/toast.js?v=82"></script>
+<script src="js/ui/dialogs.js?v=82"></script>
+<script src="js/ui/palette.js?v=82"></script>
+<script src="js/ui/menubar.js?v=82"></script>
+<script src="js/ui/find-bar.js?v=82"></script>
+<script src="js/ui/tabs.js?v=82"></script>
+<script src="js/ui/repo-menu.js?v=82"></script>
+<script src="js/ui/drop-assets.js?v=82"></script>
+<script src="js/ui/symbol-panel.js?v=82"></script>
+<script src="js/ui/outline.js?v=82"></script>
+<script src="js/ui/sidebar.js?v=82"></script>
+<script src="js/ui/statusbar.js?v=82"></script>
+<script src="js/ui/settings-page.js?v=82"></script>
+<script src="js/ui/app-commands.js?v=82"></script>
+<script src="js/ui/home.js?v=82"></script>
+<script src="js/ui/ai-panel.js?v=82"></script>
   <!-- 桌面端胶水层：浏览器里整个空转（靠 window.mixmark 自判），可以无条件引入 -->
-  <script src="js/ui/desktop.js?v=80"></script>
-  <script src="js/ui/shell.js?v=80"></script>
+  <script src="js/ui/desktop.js?v=82"></script>
+  <script src="js/ui/shell.js?v=82"></script>
 
 <!-- 7. 导出 -->
-<script src="js/export/md.js?v=80"></script>
-<script src="js/export/migrate.js?v=80"></script>
-<script src="js/export/html.js?v=80"></script>
-<script src="js/export/pdf.js?v=80"></script>
+<script src="js/export/md.js?v=82"></script>
+<script src="js/export/migrate.js?v=82"></script>
+<script src="js/export/html.js?v=82"></script>
+<script src="js/export/pdf.js?v=82"></script>
 
 <!-- 8. 启动（必须最后） -->
-<script src="js/main.js?v=80"></script>
+<script src="js/main.js?v=82"></script>
 
 </body>
 </html>

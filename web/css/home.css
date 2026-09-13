@@ -71,40 +71,91 @@
   color: var(--mm-text-2);
 }
 
-/* ---- 两张卡片 ---- */
+/* ---- 仓库列表 ---- */
 
-.home__cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 320px));
-  justify-content: center;
-  gap: 16px;
-  width: 100%;
-  max-width: 700px;
-}
-
-.home-card {
+.home__repos-block {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 20px;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  max-width: 720px;
+}
+
+.home__section {
+  margin: 0;
+  font-size: var(--mm-fs-sm);
+  font-weight: var(--mm-weight-medium);
+  color: var(--mm-text-3);
+}
+
+.home__repos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+
+/* 一张卡片 = 一个仓库：名称在上、地址在下。
+   地址可能很长，一律省略号截断 —— 让它换行会把卡片撑成参差不齐的高度 */
+.repo-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
   border: 1px solid var(--mm-border);
   border-radius: var(--mm-radius-lg);
   background: var(--mm-surface);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--mm-dur-fast) var(--mm-ease),
+    background var(--mm-dur-fast) var(--mm-ease);
 }
 
-.home-card__title {
-  margin: 0;
+.repo-card:hover {
+  border-color: var(--mm-border-strong);
+  background: var(--mm-surface-2);
+}
+
+/* 当前仓库：强调色描边 + 右上角标记。
+   不做整块填充 —— 实心需要一对「强调底 + 其上文字」的颜色，
+   那是换主题时最容易配歪的东西（首页按钮同理） */
+.repo-card.is-active {
+  border-color: var(--mm-accent);
+}
+
+.repo-card__name {
   font-size: var(--mm-fs-ui);
   font-weight: var(--mm-weight-medium);
   color: var(--mm-text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.home-card__desc {
-  margin: 0;
-  flex: 1;
+.repo-card__path {
   font-size: var(--mm-fs-sm);
-  line-height: 1.7;
+  color: var(--mm-text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.repo-card.is-active .repo-card__path {
   color: var(--mm-text-2);
+}
+
+.repo-card__badge {
+  position: absolute;
+  top: -8px;
+  right: 10px;
+  padding: 1px 7px;
+  border-radius: var(--mm-radius-sm);
+  background: var(--mm-accent);
+  color: var(--mm-text-inv);
+  font-size: var(--mm-fs-sm);
+  line-height: 1.4;
 }
 
 .home-card__btn {

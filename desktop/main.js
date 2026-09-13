@@ -346,6 +346,19 @@ function registerIpc() {
 
   ipcMain.handle('mm:library:pick', () => pickFolder());
 
+  /**
+   * 切换到一个**已经知道**的文件夹（页面里的仓库列表用它）。
+   * 与 pick 的唯一区别是路径从哪来：这里不弹对话框。
+   *
+   * 刻意**不发** mm:library-changed —— 发起切换的那一方自己会重新加载文档树，
+   * 再广播一次就会 reload 两遍。
+   */
+  ipcMain.handle('mm:library:openPath', (_e, p) => {
+    const root = String(p || '');
+    if (!root) throw new Error('未指定文件夹');
+    return connect(root);
+  });
+
   ipcMain.handle('mm:library:forget', () => {
     lib = null;
     writeConfig({ libraryRoot: null });

@@ -290,6 +290,8 @@
 
   function publishTabs() {
     MM.store.set({ openTabs: openIds.slice() });
+    // 标签页也跟着仓库走：切回来的时候该是上次那几篇
+    putWb({ openTabs: openIds.slice() });
   }
 
   /**
@@ -356,12 +358,8 @@
 
         MM.bus.emit('doc:opened', { id: id, content: content });
 
-        // 记下最后打开的文档，下次启动直接回到这里
-        try {
-          window.localStorage.setItem('mixmark:last-doc', id);
-        } catch (err) {
-          /* 忽略：非致命 */
-        }
+        // 记下最后打开的文档，下次启动直接回到这里（按仓库各记一份）
+        putWb({ docId: id });
 
         return content;
       })
@@ -588,11 +586,23 @@
   }
 
   /* ------------------------------------------------------------------
-     展开状态（视图偏好，存设置而不是文档数据）
+     展开状态
+     ------------------------------------------------------------------
+     存在「当前仓库的工作台状态」里，而不是全局设置里 ——
+     展开了哪些文件夹属于「我在这堆资料里干到哪儿了」，
+     换一堆资料就该重新算，不该继承别的库的折叠状态。
      ------------------------------------------------------------------ */
 
+  function wb() {
+    return MM.repos ? MM.repos.workbench() : {};
+  }
+
+  function putWb(fields) {
+    if (MM.repos) MM.repos.patchWorkbench(null, fields);
+  }
+
   function expandedList() {
-    var list = MM.settings.get('expandedFolders');
+    var list = wb().expandedFolders;
     return Array.isArray(list) ? list : [];
   }
 
@@ -608,20 +618,20 @@
     else if (!expanded && i !== -1) list.splice(i, 1);
     else return;
 
-    MM.settings.set({ expandedFolders: list });
+    putWb({ expandedFolders: list });
   }
 
   function toggleFolder(id) {
     setFolderExpanded(id, !isFolderExpanded(id));
   }
 
-  /** 删除文件夹时清掉它的展开记录，避免设置里越积越多 */
+  /** 删除文件夹时清掉它的展开记录，避免状态里越积越多 */
   function pruneExpanded(validIds) {
     var list = expandedList();
     var kept = list.filter(function (id) {
       return validIds.indexOf(id) !== -1;
     });
-    if (kept.length !== list.length) MM.settings.set({ expandedFolders: kept });
+    if (kept.length !== list.length) putWb({ expandedFolders: kept });
   }
 
   function remove(id) {
@@ -739,11 +749,23 @@
   }
 
   /**
-   * 切换存储位置之后调用：重新拉一遍索引，并打开一篇合适的文档。
+   * 重新拉一遍索引，并打开一篇合适的文档。
+   *
    * 新位置是空的话不自动造文件 —— 往用户硬盘上凭空写一个 untitled.md
    * 是不礼貌的，把编辑器清空、等他按「+」更合适。
+   *
+   * repoChanged 表示「换了一个仓库」（不只是换后端）：这时先把运行时状态
+   * 换成这个仓库自己的那份，否则 A 库的标签页会留在界面上，点开就是找不到文档。
    */
-  function reload() {
+  function reload(opts) {
+    opts = opts || {};
+
+    if (opts.repoChanged) {
+      var saved = wb().openTabs;
+      openIds = Array.isArray(saved) ? saved.slice() : [];
+      MM.store.set({ openTabs: openIds.slice(), activeFolderId: null });
+    }
+
     return flushPending()
       .then(function () {
         return refreshIndex();
@@ -751,13 +773,28 @@
       .then(function () {
         var state = MM.store.get();
 
+        // 标签页里可能有这个仓库里不存在的文档（在别处删了，或者标签是上个库留下的）
+        var known = {};
+        state.docs.forEach(function (d) {
+          known[d.id] = true;
+        });
+        var kept = openIds.filter(function (id) {
+          return known[id];
+        });
+        if (kept.length !== openIds.length) {
+          openIds = kept;
+          publishTabs();
+        }
+
+        // 回到这个仓库上次打开的文档（存在才回，不然就开第一篇）
+        var last = wb().docId;
         var alive =
-          state.docId &&
+          last &&
           state.docs.some(function (d) {
-            return d.id === state.docId;
+            return d.id === last;
           });
 
-        if (alive) return open(state.docId);
+        if (alive) return open(last);
         if (state.docs.length) return open(state.docs[0].id);
 
         clearCurrent();
@@ -785,10 +822,13 @@
 
   /**
    * 启动流程：初始化存储 → 读索引 → 打开上次的文档 / 首个文档 / 新建示例。
+   *
+   * preferred 是「当前仓库建议用的后端」，由 MM.reposOps.startup() 算出来 ——
+   * 桌面端可以有多个文件夹仓库，光靠固定优先级选不出用户上次待的那个。
    */
-  function boot() {
+  function boot(preferred) {
     return MM.provider
-      .init()
+      .init(preferred)
       .then(function (provider) {
         MM.store.set({ tier: provider.kind });
         // 一次性把文档与文件夹都拉进来，避免启动后列表闪一下才补齐
@@ -804,12 +844,7 @@
           return create({ content: welcomeContent() });
         }
 
-        var lastId = null;
-        try {
-          lastId = window.localStorage.getItem('mixmark:last-doc');
-        } catch (err) {
-          /* 忽略：非致命 */
-        }
+        var lastId = wb().docId || null;
 
         var exists =
           lastId &&

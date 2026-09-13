@@ -177,6 +177,56 @@
     return r;
   }
 
+  /**
+   * 仓库一行：名字 + 地址，右边是操作。
+   * 「当前」的那一行不给「切换」按钮 —— 点了也没意义，反而让人以为没生效。
+   * 名字和地址都给出来：两个仓库都叫「笔记」时，只有地址能分开它们。
+   */
+  function repoRow(repo) {
+    var r = el('div', 'settings__row');
+
+    var left = el('div');
+    left.appendChild(el('span', 'settings__row-label', repo.label));
+    left.appendChild(
+      el(
+        'span',
+        'settings__row-hint',
+        repo.active ? repo.store + ' · ' + MM.i18n.t('repoCurrent') : repo.store
+      )
+    );
+
+    var ctrl = el('div', 'settings__control');
+    function act(text, fn) {
+      var b = el('button', 'btn', text);
+      b.type = 'button';
+      b.addEventListener('click', fn);
+      ctrl.appendChild(b);
+    }
+
+    if (!repo.active) {
+      act(MM.i18n.t('setRepoOpen'), function () {
+        if (handle) handle.close(null);
+        setTimeout(function () {
+          MM.reposOps.enter(repo);
+        }, 0);
+      });
+    }
+
+    // 本机文档库没有文件夹，也就没有「改名/移除」这回事
+    if (repo.path) {
+      act(MM.i18n.t('setRepoRename'), function () {
+        MM.reposOps.rename(repo.id);
+      });
+      act(MM.i18n.t('setRepoRemove'), function () {
+        MM.reposOps.remove(repo.id);
+      });
+    }
+
+    r.appendChild(left);
+    r.appendChild(ctrl);
+    return r;
+  }
+
   /** 执行一个存储相关命令，然后关掉设置页（底下的树会整棵换掉） */
   function runStorageCommand(id, arg) {
     if (handle) handle.close(null);
@@ -349,6 +399,24 @@
     );
     g4.appendChild(langRow.row);
     body.appendChild(g4);
+
+    /* ---- 仓库 ---- */
+    var gRepo = group('setReposTitle');
+    gRepo.appendChild(el('div', 'settings__row-hint', MM.i18n.t('setReposDesc')));
+
+    MM.repos.list().forEach(function (repo) {
+      gRepo.appendChild(repoRow(repo));
+    });
+
+    if (MM.desktopBridge && MM.desktopBridge.available()) {
+      gRepo.appendChild(
+        actionRow(MM.i18n.t('setRepoAdd'), null, MM.i18n.t('setRepoAdd'), false, function () {
+          runStorageCommand('repo.create');
+        })
+      );
+    }
+
+    body.appendChild(gRepo);
 
     /* ---- 存储位置 ---- */
     var g5 = group('setStorage');

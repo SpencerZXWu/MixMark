@@ -287,6 +287,67 @@
 }
 
 /* --------------------------------------------------------------------------
+   当前仓库（侧栏第一行）
+
+   它决定了下面整棵树是谁的，所以摆在树的上方。名字一行、地址一行：
+   两个仓库都叫「笔记」时，只有那行地址能把它们分开。
+   -------------------------------------------------------------------------- */
+.repo-switch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  border-bottom: 1px solid var(--mm-border);
+  background: transparent;
+  color: var(--mm-text-1);
+  text-align: left;
+  cursor: pointer;
+}
+
+.repo-switch:hover {
+  background: var(--mm-surface-2);
+}
+
+.repo-switch__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  /* 没有 min-width:0，flex 子项不会收缩，省略号就不生效 */
+  min-width: 0;
+}
+
+.repo-switch__name {
+  font-size: var(--mm-fs-ui);
+  font-weight: var(--mm-weight-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.repo-switch__path {
+  font-size: var(--mm-fs-sm);
+  color: var(--mm-text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.repo-switch__caret {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  fill: none;
+  stroke: var(--mm-text-3);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* --------------------------------------------------------------------------
    标签
 
    做成浏览器标签的样子：选中项的底色与下方内容区相同，视觉上连成一体。

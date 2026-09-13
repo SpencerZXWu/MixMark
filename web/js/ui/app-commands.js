@@ -737,6 +737,246 @@
   ]);
 
   /* ------------------------------------------------------------------
+     仓库：本地文件夹 / 本机文档库
+     ------------------------------------------------------------------
+     一个仓库 = 一份文档数据 + 一套属于它自己的工作台状态（见 core/repos.js）。
+     这里只负责「切过去」这一件事 —— 首页卡片、侧栏下拉、状态栏、设置页
+     四个入口全都走这一个出口，免得四条路径各写一遍顺序。
+     ------------------------------------------------------------------ */
+
+  /**
+   * 进入一个仓库。三步的顺序不能变：
+   *   1. 先让主进程连上那个文件夹。连不上就到此为止 —— 继续往下走会切到一个
+   *      空的 electron 库，看起来就像数据全丢了。
+   *   2. 再改「当前仓库」：工作台状态是按它取存的，改晚了就会读到上一个库的。
+   *   3. 最后才 reload，而且必须带 repoChanged —— 它会换成这个仓库自己的
+   *      上次打开的文档与标签页。
+   */
+  function enterRepo(repo, opts) {
+    opts = opts || {};
+    if (!repo) return Promise.reject(new Error('unknown-repo'));
+
+    var desk = MM.desktopBridge;
+    var isFolder = !!repo.path;
+
+    if (isFolder && (!desk || !desk.available())) {
+      MM.toast.danger(MM.i18n.t('repoNeedsDesktop'));
+      return Promise.resolve(null);
+    }
+
+    return Promise.resolve()
+      .then(function () {
+        // connected 表示主进程刚刚已经连上了（就是创建仓库时选的那个文件夹）
+        if (isFolder && !opts.connected) return desk.openPath(repo.path);
+        return null;
+      })
+      .then(function () {
+        return MM.provider.use(isFolder ? 'electron' : repo.kind);
+      })
+      .then(function (p) {
+        MM.repos.setCurrent(repo.id);
+        MM.store.set({
+          tier: p.kind,
+          repo: MM.repos.labelOf(repo),
+          repoPath: MM.repos.pathOf(repo)
+        });
+        return MM.docs.reload({ repoChanged: true });
+      })
+      .then(function () {
+        MM.bus.emit('repo:changed', { id: repo.id });
+        return repo;
+      })
+      .catch(function (err) {
+        MM.toast.danger(
+          MM.i18n.t('repoSwitchFailed', {
+            name: MM.repos.labelOf(repo),
+            msg: (err && err.message) || err
+          })
+        );
+        return null;
+      });
+  }
+
+  /**
+   * 新建本地仓库：选文件夹 → 起名字 → 进去。
+   * 名字默认给文件夹名，但可以改 —— 两个都叫「笔记」的文件夹只能靠名字分开。
+   */
+  function createRepo() {
+    var desk = MM.desktopBridge;
+    if (!desk || !desk.available()) {
+      MM.toast.show(MM.i18n.t('homeRepoSoon'));
+      return Promise.resolve(null);
+    }
+
+    return desk
+      .pickRoot()
+      .then(function (st) {
+        if (!st || !st.connected) return null;
+
+        // 同一个文件夹被选第二次：直接切过去，别让列表里出现两条一模一样的
+        var exist = MM.repos.findByPath(st.path);
+        if (exist) {
+          MM.toast.show(MM.i18n.t('repoAlreadyAdded', { name: MM.repos.labelOf(exist) }));
+          return enterRepo(exist, { connected: true });
+        }
+
+        return MM.dialogs
+          .prompt({
+            title: MM.i18n.t('repoNameTitle'),
+            label: MM.i18n.t('repoNameLabel'),
+            value: st.name || '',
+            placeholder: MM.i18n.t('repoNamePlaceholder'),
+            okText: MM.i18n.t('repoNameOk')
+          })
+          .then(function (name) {
+            var repo = MM.repos.add({
+              kind: 'electron',
+              // 取消命名也算数：用文件夹名兜底，别让人白选一次文件夹
+              label: String(name == null ? '' : name).trim() || null,
+              path: st.path
+            });
+            return enterRepo(repo, { connected: true }).then(function (done) {
+              if (done) MM.toast.ok(MM.i18n.t('repoCreated', { name: MM.repos.labelOf(repo) }));
+              return done;
+            });
+          });
+      })
+      .catch(function (err) {
+        if (err && err.name === 'AbortError') return null; // 用户取消，不是错误
+        MM.toast.danger(MM.i18n.t('desktopFailed', { msg: (err && err.message) || err }));
+        return null;
+      });
+  }
+
+  function renameRepo(id) {
+    var repo = MM.repos.raw(id);
+    if (!repo) return Promise.resolve(null);
+
+    return MM.dialogs
+      .prompt({
+        title: MM.i18n.t('repoRenameTitle'),
+        label: MM.i18n.t('repoNameLabel'),
+        value: MM.repos.labelOf(repo),
+        placeholder: MM.i18n.t('repoNamePlaceholder'),
+        okText: MM.i18n.t('btnOk')
+      })
+      .then(function (name) {
+        if (name === null) return null;
+        MM.repos.patch(repo.id, { label: String(name).trim() || null });
+        MM.bus.emit('repo:list');
+        MM.bus.emit('repo:changed', { id: repo.id });
+        return repo;
+      });
+  }
+
+  /**
+   * 从列表里移除一个仓库。
+   * **不动磁盘上的任何东西** —— 这是「不再显示它」，不是删数据；想要回来，
+   * 重新选那个文件夹即可（.mixmark 还在，文档原样认回来）。
+   */
+  function removeRepo(id) {
+    var repo = MM.repos.raw(id);
+    if (!repo || repo.system) return Promise.resolve(false);
+
+    return MM.dialogs
+      .confirm({
+        title: MM.i18n.t('repoRemoveTitle'),
+        message: MM.i18n.t('repoRemoveMsg', {
+          name: MM.repos.labelOf(repo),
+          path: repo.path || ''
+        }),
+        okText: MM.i18n.t('repoRemoveOk'),
+        danger: true
+      })
+      .then(function (yes) {
+        if (!yes) return false;
+
+        var wasActive = MM.repos.currentId() === id;
+        MM.repos.remove(id);
+        MM.bus.emit('repo:list');
+
+        // 移掉的正好是当前仓库：退回本机文档库，别把界面留在一个不存在的库上
+        if (wasActive) {
+          return enterRepo(MM.repos.raw(MM.repos.LOCAL_ID)).then(function () {
+            return true;
+          });
+        }
+        return true;
+      });
+  }
+
+  function openRepoFolder() {
+    var desk = MM.desktopBridge;
+    if (!desk || !desk.available()) return Promise.resolve();
+    return Promise.resolve(desk.openRoot()).then(function (done) {
+      if (!done) MM.toast.show(MM.i18n.t('desktopNotConnected'));
+    });
+  }
+
+  /**
+   * 启动时「采纳」上次待的那个仓库：只把后端定下来，不碰界面 ——
+   * 这一刻界面还没画完，文档也由 docs.boot 负责加载，这里不需要 reload。
+   *
+   * 返回建议的优先后端（'electron' / 'local' / 'idb'），
+   * 返回 null 表示「没偏好，按自动选路来」。
+   */
+  function startupRepo() {
+    return resolveStartupRepo().then(function (kind) {
+      // 侧栏与状态栏比仓库先初始化完，它们当时读不到仓库，只能显示占位文案。
+      // 这里补一次通知，让它们把当前仓库正经画出来
+      MM.bus.emit('repo:changed', { id: MM.repos.currentId() });
+      return kind;
+    });
+  }
+
+  function resolveStartupRepo() {
+    var desk = MM.desktopBridge;
+    var eProvider = MM.providers && MM.providers.electron;
+
+    function localKind() {
+      var local = MM.repos.raw(MM.repos.LOCAL_ID);
+      return local ? local.kind : 'local';
+    }
+
+    // 桌面端：**主进程连着哪个文件夹才说了算**。
+    // 它可能已经连上了（上次启动留下的、或命令行 --library 指定的），
+    // 这时页面里的记录反而是过期的。
+    if (desk && desk.available() && eProvider && typeof eProvider.prepare === 'function') {
+      return eProvider
+        .prepare()
+        .then(function () {
+          var st = desk.status();
+          if (!st || !st.connected || !st.path) return localKind();
+
+          // 主进程连着的文件夹还没登记过 —— 比如命令行直接指过去的，补上
+          var repo = MM.repos.findByPath(st.path);
+          if (!repo) repo = MM.repos.add({ kind: 'electron', path: st.path, label: null });
+          MM.repos.setCurrent(repo.id);
+          return 'electron';
+        })
+        .catch(function (err) {
+          console.warn('[repo] 读回主进程的库失败', err);
+          return localKind();
+        });
+    }
+
+    return Promise.resolve(localKind());
+  }
+
+  /** 给 UI 层用的统一出口 */
+  MM.reposOps = {
+    enter: enterRepo,
+    create: createRepo,
+    rename: renameRepo,
+    remove: removeRepo,
+    openFolder: openRepoFolder,
+    startup: startupRepo,
+    of: function (id) {
+      return MM.repos.raw(id);
+    }
+  };
+
+  /* ------------------------------------------------------------------
      存储位置
      ------------------------------------------------------------------ */
 
@@ -753,6 +993,34 @@
   }
 
   MM.commands.registerAll([
+    {
+      id: 'repo.create',
+      titleKey: 'cmdNewRepo',
+      group: 'file',
+      run: createRepo
+    },
+
+    {
+      id: 'repo.rename',
+      titleKey: 'cmdRenameRepo',
+      group: 'file',
+      run: function () {
+        return renameRepo(MM.repos.currentId());
+      }
+    },
+
+    {
+      id: 'repo.openFolder',
+      titleKey: 'cmdOpenRepoFolder',
+      group: 'file',
+      run: openRepoFolder,
+      // 只有本地文件夹仓库才有「在文件管理器里打开」这回事
+      enabled: function () {
+        var r = MM.repos.current();
+        return !!(MM.desktopBridge && MM.desktopBridge.available() && r && r.path);
+      }
+    },
+
     {
       id: 'storage.switch',
       titleKey: 'setStorage',
@@ -777,25 +1045,10 @@
       titleKey: 'cmdPickFolder',
       group: 'app',
       run: function () {
-        // 桌面端：真正的文件夹由主进程的对话框选，路径是个字符串，
-        // 不需要浏览器那套「句柄 + 权限」的麻烦事
-        var desk = MM.desktopBridge;
-        if (desk && desk.available()) {
-          return desk
-            .pickRoot()
-            .then(function (root) {
-              // 对话框被取消时桥会抛 AbortError（下面吞掉），但万一哪天
-              // 换成返回 null，也不能就这么往下走去切后端 ——
-              // 切到一个空的 electron 库，看起来就像数据全丢了
-              if (!root) return null;
-              return adopt('electron').then(function () {
-                MM.toast.ok(MM.i18n.t('toastFolderConnected', { name: desk.status().name || '' }));
-              });
-            })
-            .catch(function (err) {
-              if (err && err.name === 'AbortError') return; // 用户取消，不是错误
-              MM.toast.danger(MM.i18n.t('desktopFailed', { msg: (err && err.message) || err }));
-            });
+        // 桌面端：选一个文件夹就是「新建一个本地仓库」，走统一的创建流程
+        //（起名字 → 登记进仓库列表 → 进去），不要在命令里再写一遍
+        if (MM.desktopBridge && MM.desktopBridge.available()) {
+          return createRepo();
         }
 
         var fsa = fsaProvider();

@@ -23,6 +23,8 @@ contextBridge.exposeInMainWorld('mixmark', {
   library: {
     status: () => invoke('mm:library:status'),
     pick: () => invoke('mm:library:pick'),
+    /** 切换到一个已经知道的文件夹（仓库列表用），不弹对话框 */
+    openPath: (p) => invoke('mm:library:openPath', p),
     forget: () => invoke('mm:library:forget'),
     get: (key) => invoke('mm:library:get', key),
     set: (key, value) => invoke('mm:library:set', key, value),

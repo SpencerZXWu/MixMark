@@ -28,6 +28,24 @@ Electron → Capacitor → FSA → IndexedDB → localStorage
 ```
 UI 层**永远不直接调用平台 API**，只走 `MM.provider.get()`。
 
+仓库（`core/repos.js`）是 provider 外面的一层：
+```
+一个仓库 = 一份文档数据 + 一套属于它自己的工作台状态
+    本地仓库 kind=electron/fsa   电脑上的一个真实文件夹
+    本机文档库 kind=local/idb    浏览器存储，固定一个、不可移除
+```
+**谁跟着仓库走、谁全局共用**（用户拍板的划分）：
+- 跟着仓库：上次打开的文档、展开的文件夹、打开的标签页、当前选中的文件夹
+  （存 `mixmark:workbench:<repoId>`）
+- 全局：主题 / 强调色 / 字体 / 字号 / 阅读栏宽 / 分栏比例 / API Key 与模型
+
+判据是「这是数据的一部分，还是人的偏好」—— 前者换一堆资料就该重新算，
+后者人在哪都一样。新增一个状态项时先问自己它属于哪边。
+
+切仓库的顺序**不能变**：先让主进程连上文件夹（失败就到此为止），再改「当前仓库」
+（工作台状态按它取存），最后才 `docs.reload({repoChanged:true})`。
+四个入口（首页卡片 / 侧栏下拉 / 状态栏 / 设置页）都走 `MM.reposOps` 这一个出口。
+
 桌面端这边多一条约定：**磁盘层不许 `require('electron')`**。
 `desktop/lib/library-fs.js` 是纯 Node 的，所以能脱离壳单测
 （`desktop/tools/check-fs.js`，42 项）—— 一个只在 Electron 里跑得起来的
@@ -451,5 +469,7 @@ npm.cmd run build:dir # 只出 release/win-unpacked，不出安装器（快）
 | 词 | 含义 |
 |---|---|
 | Tier A/B/C/D | 运行环境分级：file:// / http(s) / Electron / Capacitor |
+| 仓库（repo） | 一份文档数据 + 它自己的工作台状态。本地仓库 = 一个真实文件夹；本机文档库 = 浏览器存储 |
+| 工作台状态 | 跟着仓库走的那几项：上次打开的文档、展开的文件夹、标签页、当前选中的文件夹 |
 | 块（block） | 预览区里被 `.mm-block` 包裹的一个顶层 Markdown 元素 |
 | 行号索引 | `.mm-block[data-line]` → 源码行号的映射，同步滚动的基础 |

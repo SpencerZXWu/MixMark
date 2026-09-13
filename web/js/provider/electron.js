@@ -153,6 +153,22 @@
   }
 
   /**
+   * 切换到一个**已经知道**的文件夹（配合页面里的仓库列表）。
+   * 路径不存在时主进程会抛错，这里原样传上去 —— 「切不过去」必须让用户看见，
+   * 悄悄失败会让他以为文档已经在那个文件夹里了。
+   */
+  function openPath(p) {
+    var b = api();
+    if (!b) return Promise.reject(new Error('unsupported'));
+
+    return wrap(b.library.openPath(p)).then(function (st) {
+      if (!st || !st.connected) throw new Error('connect-failed');
+      state = st;
+      return st;
+    });
+  }
+
+  /**
    * 让磁盘上的 .md 与索引对齐。
    * 结构操作（重命名 / 移动 / 新建文件夹）之后调一次 ——
    * 索引改了而文件没跟着走，两边会慢慢飘开，最后用户看到的是「名字对不上」。
@@ -199,6 +215,7 @@
     },
     status: status,
     pickRoot: pickRoot,
+    openPath: openPath,
     forget: forget,
     sync: sync,
     pathOf: pathOf,

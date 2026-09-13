@@ -49,11 +49,24 @@
   /**
    * 依次「准备 → 探测」候选者，选出第一个可用的并初始化。
    * 全都不可用时抛错 —— 宁可明确失败，也不要让用户以为「保存成功」。
+   *
+   * preferred 是「用户上次待的那个仓库用的后端」。有它就把它排到最前面 ——
+   * 桌面端可以有多个文件夹仓库，光靠固定优先级选不出用户想要的那一个。
+   * 它不可用（文件夹被挪走等）就安静地退回自动选路。
    */
-  function init() {
+  function init(preferred) {
     var env = detectEnvironment();
     var list = candidates();
     var tried = [];
+
+    var first = preferred ? (MM.providers || {})[preferred] : null;
+    if (first && list.indexOf(first) !== -1) {
+      list = [first].concat(
+        list.filter(function (p) {
+          return p !== first;
+        })
+      );
+    }
 
     function next(i) {
       if (i >= list.length) {

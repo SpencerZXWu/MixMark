@@ -19,7 +19,7 @@
 
   var MM = (window.MM = window.MM || {});
 
-  MM.VERSION = '0.6.0';
+  MM.VERSION = '0.6.1';
 
   /* ------------------------------------------------------------------
      致命错误：不能让用户对着一片空白猜发生了什么
@@ -172,9 +172,18 @@
     //     浏览器里它自己会空转，不需要在这里判断环境
     MM.desktop.init();
 
-    // 6. 文档
-    return MM.docs
-      .boot()
+    // 6. 仓库 → 文档
+    //    先确认上次待的是哪个仓库，它决定用哪个存储后端：桌面端可以有多个
+    //    文件夹仓库，光靠固定优先级选不出用户想要的那一个；文件夹仓库还得
+    //    先让主进程连上它。startup() 返回建议的优先后端（没有就是 null）
+    return MM.repos
+      .init()
+      .then(function () {
+        return MM.reposOps.startup();
+      })
+      .then(function (preferred) {
+        return MM.docs.boot(preferred);
+      })
       .then(function () {
         // 6.5 磁盘直连：把上次绑定的文件句柄读回来。
         //     必须在文档打开之后 —— 界面要按当前 docId 判断该不该点亮磁盘标记
