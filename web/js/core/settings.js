@@ -45,8 +45,6 @@
      * 现在搬到了 MM.repos 的**按仓库工作台状态**里 —— 它们跟着资料走、不跟着人走，
      * 换一个仓库就该是那个仓库自己的样子。详见 core/repos.js 的文件头。
      */
-    /** 是否已经看过首页。只有第一次启动停在那儿，之后直接进文档库 */
-    homeSeen: false,
     /** DeepSeek API Key。只存在这台设备的浏览器存储里 */
     aiKey: '',
     aiModel: 'deepseek-chat',

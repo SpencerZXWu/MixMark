@@ -3,7 +3,7 @@
 > 本目录由 `node tools/build-vendor.js` 自动生成，**请勿手工修改**。
 > 产物入库，浏览器端因此无需构建。
 
-生成时间：2026-09-12T13:03:00.758Z
+生成时间：2026-09-13T06:58:06.384Z
 
 | 依赖 | 版本 |
 | --- | --- |
@@ -13,6 +13,7 @@
 | `dompurify` | 3.4.15 |
 | `katex` | 0.16.47 |
 | `highlight.js` | 11.12.0 |
+| `mermaid` | 12.0.0 |
 
 ## 产物说明
 
@@ -23,6 +24,7 @@
 | `marked.js` | `window.marked` | Markdown → HTML |
 | `purify.js` | `window.DOMPurify` | HTML 净化，防注入 |
 | `katex/` | `window.katex` | 数学公式渲染（含 woff2 字体） |
+| `mermaid.bundle.js` | `window.mermaid` | UML / 流程图等图表渲染（**按需加载**，不在 index.html 里） |
 
 ## 为什么全是 IIFE 而不是 ESM
 

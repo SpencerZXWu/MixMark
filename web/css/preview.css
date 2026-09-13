@@ -413,6 +413,42 @@
   font-size: 1.05em;
 }
 
+/* --------------------------------------------------------------------------
+   UML / 流程图（Mermaid）
+   -------------------------------------------------------------------------- */
+.preview .mm-mermaid {
+  margin: 0 0 var(--mm-sp-4);
+  padding: var(--mm-sp-4) var(--mm-sp-3);
+  background: var(--mm-surface-2);
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-md);
+  /* 图比预览区宽时自己横向滚，别把整页撑出滚动条 */
+  overflow-x: auto;
+  text-align: center;
+}
+
+/* mermaid 会在 svg 上写死 width/height。不压一下的话，宽图会直接
+   溢到预览区外面去。 */
+.preview .mm-mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* 语法写错时：原始代码块留着（用户得看到自己写错在哪），加个红边 */
+.preview pre.mm-mermaid-failed {
+  border-color: var(--mm-danger);
+  margin-bottom: var(--mm-sp-2);
+}
+
+.preview .mm-mermaid-error {
+  margin: 0 0 var(--mm-sp-4);
+  padding: var(--mm-sp-2) var(--mm-sp-3);
+  border-radius: var(--mm-radius-sm);
+  background: var(--mm-danger-weak);
+  color: var(--mm-danger);
+  font-size: 0.88em;
+}
+
 .preview .katex-display {
   margin: var(--mm-sp-4) 0;
   padding: var(--mm-sp-1) 0;
@@ -506,12 +542,26 @@
   .preview table,
   .preview img,
   .preview .katex-display,
+  .preview .mm-mermaid,
   .preview h1,
   .preview h2,
   .preview h3 {
     /* 避免标题或代码块被分页切断 */
     break-inside: avoid;
     page-break-inside: avoid;
+  }
+
+  /* 图表按纸张宽度铺满：屏幕上是按 px 排的，直接打会偏小。
+     用 svg 的 viewBox 比例缩放，高度跟着走。 */
+  .preview .mm-mermaid {
+    padding: 0;
+    border: none;
+    background: none;
+  }
+
+  .preview .mm-mermaid svg {
+    max-width: 100%;
+    height: auto;
   }
 
   .preview h1,

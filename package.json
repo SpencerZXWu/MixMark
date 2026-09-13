@@ -1,6 +1,6 @@
 {
   "name": "mixmark",
-  "version": "0.6.4",
+  "version": "0.6.5",
   "private": true,
   "description": "MixMark — 极简 Markdown 文档编辑器（浏览器优先 / 本地优先 / 桌面端真实文件夹）",
   "author": "MixMark",
@@ -11,18 +11,19 @@
     "serve": "node tools/serve.js"
   },
   "dependencies": {
-    "codemirror": "^6.0.1",
-    "@codemirror/state": "^6.5.2",
-    "@codemirror/view": "^6.36.5",
     "@codemirror/commands": "^6.8.1",
+    "@codemirror/lang-markdown": "^6.3.2",
     "@codemirror/language": "^6.11.0",
     "@codemirror/search": "^6.5.10",
-    "@codemirror/lang-markdown": "^6.3.2",
+    "@codemirror/state": "^6.5.2",
+    "@codemirror/view": "^6.36.5",
     "@lezer/highlight": "^1.2.1",
-    "marked": "^15.0.7",
+    "codemirror": "^6.0.1",
     "dompurify": "^3.2.5",
+    "highlight.js": "^11.11.1",
     "katex": "^0.16.21",
-    "highlight.js": "^11.11.1"
+    "marked": "^15.0.7",
+    "mermaid": "^12.0.0"
   },
   "devDependencies": {
     "esbuild": "^0.25.2"

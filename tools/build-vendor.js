@@ -119,7 +119,32 @@ async function buildHljs() {
   log.ok(`hljs.bundle.js  ${fmtSize(fs.statSync(outfile).size)}`);
 }
 
-/** 3. marked —— 官方已提供 UMD 产物，直接复制 */
+/**
+ * 3. Mermaid —— UML / 流程图等图表
+ *
+ * 产物刻意**不写进 index.html**：2MB 出头，且多数文档里没有图表。
+ * 由 preview/pipeline.js 在第一次遇到 ```mermaid 时动态插 <script>。
+ * 它是经典脚本，`file://` 下插 script 标签不受 CORS 限制。
+ */
+async function buildMermaid() {
+  log.step('打包 Mermaid（UML / 流程图，按需加载）');
+  const outfile = path.join(VENDOR, 'mermaid.bundle.js');
+  await esbuild.build({
+    entryPoints: [path.join(__dirname, 'vendor-entry', 'mermaid.js')],
+    bundle: true,
+    format: 'iife',
+    platform: 'browser',
+    target: ['chrome100', 'firefox100', 'safari15'],
+    minify: true,
+    legalComments: 'none',
+    outfile,
+    logLevel: 'warning',
+    define: { 'process.env.NODE_ENV': '"production"' },
+  });
+  log.ok(`mermaid.bundle.js  ${fmtSize(fs.statSync(outfile).size)}`);
+}
+
+/** 4. marked —— 官方已提供 UMD 产物，直接复制 */
 function copyMarked() {
   log.step('复制 marked（UMD）');
   const src = resolveFirst(
@@ -227,7 +252,7 @@ function buildKatexInlineCss() {
 /* 清单文件：记录版本，便于日后追溯「这个产物是怎么来的」                    */
 /* ------------------------------------------------------------------ */
 function writeManifest(meta) {
-  const deps = ['codemirror', '@codemirror/lang-markdown', 'marked', 'dompurify', 'katex', 'highlight.js'];
+  const deps = ['codemirror', '@codemirror/lang-markdown', 'marked', 'dompurify', 'katex', 'highlight.js', 'mermaid'];
   const rows = deps
     .map((d) => {
       let v = '?';
@@ -260,6 +285,7 @@ ${rows}
 | \`marked.js\` | \`window.marked\` | Markdown → HTML |
 | \`purify.js\` | \`window.DOMPurify\` | HTML 净化，防注入 |
 | \`katex/\` | \`window.katex\` | 数学公式渲染（含 woff2 字体） |
+| \`mermaid.bundle.js\` | \`window.mermaid\` | UML / 流程图等图表渲染（**按需加载**，不在 index.html 里） |
 
 ## 为什么全是 IIFE 而不是 ESM
 
@@ -290,6 +316,7 @@ async function main() {
   try {
     await buildCodeMirror();
     await buildHljs();
+    await buildMermaid();
     copyMarked();
     copyPurify();
     copyKatex();

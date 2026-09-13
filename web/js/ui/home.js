@@ -158,14 +158,13 @@
     bind();
     render();
 
-    if (!MM.settings.get('homeSeen')) {
-      // 只在第一次启动停在这儿，之后直接进文档库
-      MM.settings.set({ homeSeen: true });
-      show();
-    } else {
-      app.classList.remove('is-home');
-      root.hidden = true;
-    }
+    // 首启**不停在仓库列表**，直接进编辑器 —— 那里躺着欢迎文档。
+    //
+    // 列表本身随时可看：点左上角的品牌名，或者侧栏仓库浮层里的「所有仓库」。
+    // 把新手拦在这里本来就没什么用 —— 第一次打开时本机文档库是空的，
+    // 本地仓库一个都还没建，列表上只有一张卡片。
+    app.classList.remove('is-home');
+    root.hidden = true;
   }
 
   MM.home = {

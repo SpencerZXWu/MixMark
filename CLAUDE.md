@@ -489,6 +489,36 @@ npm.cmd run build:dir # 只出 release/win-unpacked，不出安装器（快）
     要支持「换个数据目录」这类开关，得让路径变成函数现算，或者保证
     `setPath` 发生在模块加载之前。
 
+43. **mermaid 那套东西全是「跟别处不一样」的**
+    图表（UML / 流程 / 时序 / 状态 / ER / 甘特）都走 mermaid，它和预览里
+    其他渲染有四处根本差别，改管线前先记住：
+
+    - **它 5MB，所以按需加载。** `web/vendor/mermaid.bundle.js` **刻意不写进
+      `index.html`**，由 `pipeline.js` 在第一次真的遇到 ```mermaid 时动态插
+      `<script>`。也幸亏它是经典脚本 —— `file://` 下拒的是
+      `type="module"`，插普通 script 标签没事。
+    - **它是异步的，所以必须有代次号。** `renderMath` 那趟是同步的，
+      而 mermaid 要往 body 里插临时节点量文字宽度，只能 `await`。
+      于是它渲染完才回头改 DOM —— 而 `renderNow` 每次都整体换掉
+      `container.innerHTML`。`renderToken` 就是防这个：异步回调开工前先
+      比一下自己还是不是当班的那批，不然结果会写进不属于它的那一版。
+    - **DOMPurify 不管它。** 图表是在净化之后才生成的 DOM，`FORBID_TAGS`
+      里有 `style` —— 真让它过一遍，渲染出来就是「有图无色」。安全靠
+      mermaid 自己的 `securityLevel: 'strict'`。
+    - **主题换了要重画。** 预览里别的元素都跟着 CSS 变量走，唯独 mermaid
+      把颜色固化在 SVG 属性里。`pipeline.js` 监听 `settings.onChange` 里
+      的 `theme` 重新渲染一遍，否则切深色后图表还是白底黑字。
+
+    另外两条小的：`highlightCode` 必须跳过 `language-mermaid`（不然 hljs 会把
+    `graph TD` 涂得花花绿绿），以及关掉 `htmlLabels`（默认拿
+    `<foreignObject>` 包 HTML 排版，导出与打印时很不稳）。
+
+44. **示例文档别塞进 i18n.js**
+    欢迎文档又长又双语，但它是**一篇 Markdown 正文**，不是界面文案：
+    它出现在文档树里、会被用户顺手改掉。放在 `core/welcome.js`，
+    `docs.js` 只管调。标题判定要**两种语言都认** —— 顶栏拿它决定
+    「标题位留不留空」，而「中文标题 + 英文界面」这种组合是会出现的。
+
 ## 六、术语
 
 | 词 | 含义 |

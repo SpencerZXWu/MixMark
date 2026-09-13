@@ -70,6 +70,14 @@
     'table{border-collapse:collapse;margin:1em 0;display:block;overflow:auto}',
     'th,td{border:1px solid var(--mm-border);padding:.5em .85em}',
     'th{background:var(--mm-surface-2);font-weight:600}',
+    /* 图表：SVG 已经内联在克隆下来的预览 DOM 里，导出件**不需要任何脚本**，
+       也不需要 mermaid 本体（那是 5MB）。这里只管排版。 */
+    '.mm-mermaid{margin:1.2em 0;padding:12px;border:1px solid var(--mm-border);',
+    'border-radius:8px;background:var(--mm-surface-2);overflow-x:auto;text-align:center}',
+    '.mm-mermaid svg{max-width:100%;height:auto}',
+    'pre.mm-mermaid-failed{border-color:#b3261e}',
+    '.mm-mermaid-error{margin:.6em 0;padding:8px 12px;border-radius:6px;',
+    'background:#fdecea;color:#b3261e;font-size:.9em}',
     /* 任务列表：去掉项目符号，只留勾选框 */
     'li.mm-task,li:has(>input[type=checkbox]){list-style:none;margin-left:-1.3em}',
     'input[type=checkbox]{margin-right:.4em}',
@@ -102,7 +110,8 @@
     '[data-scheme=dark] .hljs-built_in{color:#ffa657}',
     /* 打印：别把白边和背景色一起打出来 */
     '@media print{body{padding:0;background:#fff;color:#000}.mm-doc{max-width:none}',
-    'pre,blockquote,table{page-break-inside:avoid}}'
+    '.mm-mermaid{padding:0;border:none;background:none}',
+    'pre,blockquote,table,.mm-mermaid{page-break-inside:avoid}}'
   ].join('\n');
 
   /* ------------------------------------------------------------------
