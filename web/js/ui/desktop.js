@@ -94,8 +94,12 @@
     return Promise.resolve(b.library.rescan ? b.library.rescan() : null)
       .then(function (r) {
         if (!r) return null;
-        return MM.docs.reload().then(function () {
-          MM.toast.ok(MM.i18n.t('toastRescanned', { n: r.adopted }));
+        // 新收编的文档在磁盘上的位置也是新的，先把桥里那份快照刷新（见 refresh），
+        // 否则状态栏与 AI 对它们会说「不知道存在哪」
+        return Promise.resolve(MM.desktopBridge.refresh()).then(function () {
+          return MM.docs.reload().then(function () {
+            MM.toast.ok(MM.i18n.t('toastRescanned', { n: r.adopted }));
+          });
         });
       })
       .catch(function (err) {
@@ -174,12 +178,36 @@
     });
   }
 
+  /**
+   * 自动扫描在文件夹里发现了新文档（窗口重新获得焦点时跑的）。
+   *
+   * 悄悄换上新的文档树，只留一句轻提示 —— 用户只是切回来而已，
+   * 不该看到「已连接文件夹」那种像是重新连了一次的话。
+   */
+  function bindLibraryScanned() {
+    var b = ready();
+    if (!b || typeof b.onLibraryScanned !== 'function') return;
+
+    b.onLibraryScanned(function (info) {
+      // 先刷新桥里的快照，再重新读索引 —— 否则切窗口正好夹着一次编辑，
+      // 而且新收编的几篇也拿不到磁盘路径
+      MM.docs.reload().then(function () {
+        return MM.desktopBridge.refresh();
+      }).then(function () {
+        if (info && info.adopted) {
+          MM.toast.show(MM.i18n.t('toastFolderScanned', { n: info.adopted }));
+        }
+      });
+    });
+  }
+
   function init() {
     if (!ready()) return false;
 
     registerCommands();
     bindMenu();
     bindLibraryChanged();
+    bindLibraryScanned();
 
     // 让设置页与状态栏知道「这台机器能做到什么」
     MM.store.set({ desktop: true });

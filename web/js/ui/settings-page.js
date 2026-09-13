@@ -177,6 +177,11 @@
     return r;
   }
 
+  /** 桌面端：本地文件夹本来就是它的主场，界面不必再问「要不要连文件夹」 */
+  function isDesktopHost() {
+    return !!(MM.desktopBridge && MM.desktopBridge.available());
+  }
+
   /**
    * 仓库一行：名字 + 地址，右边是操作。
    * 「当前」的那一行不给「切换」按钮 —— 点了也没意义，反而让人以为没生效。
@@ -419,7 +424,13 @@
     body.appendChild(gRepo);
 
     /* ---- 存储位置 ---- */
+    // 桌面端不画这一区：它已经被上面的「仓库」完全取代了。
+    // 留着只会有害 —— 它是围绕浏览器的 File System Access 写的，
+    // 在桌面端会显示「当前环境不支持本地文件夹」，而桌面端恰恰是
+    // 唯一真的在用本地文件夹的那个。
+    // （下面这段的缩进没跟着 if 加，是为了让 diff 只显示两行）
     var g5 = group('setStorage');
+    if (!isDesktopHost()) {
 
     var curRow = el('div', 'settings__row');
     var curLeft = el('div');
@@ -474,6 +485,7 @@
     }
 
     body.appendChild(g5);
+    }
 
     /* ---- 页脚：版本 ---- */
     var foot = el('div', 'settings__row');

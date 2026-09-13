@@ -26,6 +26,10 @@ const CONFIG_FILE = path.join(app.getPath('userData'), 'desktop.json');
 let lib = null;
 let win = null;
 
+/** 焦点触发的自动扫描：两次之间至少隔这么久（来回切窗口不必反复扫盘） */
+const SCAN_THROTTLE = 1500;
+let lastScanAt = 0;
+
 /* ------------------------------------------------------------------
    配置
    ------------------------------------------------------------------ */
@@ -143,6 +147,30 @@ function createWindow() {
 
   win.once('ready-to-show', () => win.show());
 
+  /**
+   * 窗口重新获得焦点时扫一眼文件夹。
+   *
+   * 用户往文件夹里丢文档、切回应用就该看见它 —— 这是文件管理器配编辑器的
+   * 常见习惯，指望人记得点「重新扫描」是不现实的。
+   * 节流：来回切窗口不必每次都扫盘。
+   */
+  win.on('focus', () => {
+    if (!lib) return;
+
+    const now = Date.now();
+    if (now - lastScanAt < SCAN_THROTTLE) return;
+    lastScanAt = now;
+
+    try {
+      const r = lib.scanFolder();
+      if (r.adopted && win && !win.isDestroyed()) {
+        win.webContents.send('mm:library-scanned', { adopted: r.adopted, files: r.files });
+      }
+    } catch (err) {
+      console.warn('[desktop] 自动扫描失败', err);
+    }
+  });
+
   win.on('close', () => {
     if (!win) return;
     const b = win.getBounds();
@@ -177,6 +205,7 @@ function buildMenu() {
         { type: 'separator' },
         { label: '连接文件夹…', click: () => pickFolder('menu') },
         { label: '在文件管理器里打开', click: () => openRoot() },
+        { label: '重新扫描文件夹', click: () => send('storage.rescanFolder') },
         { type: 'separator' },
         { label: '打开文件…', accelerator: 'CmdOrCtrl+O', click: () => send('file.importFiles') },
         { label: '导出当前文档到文件…', accelerator: 'CmdOrCtrl+Shift+S', click: () => send('file.exportToFile') },
@@ -392,9 +421,9 @@ function registerIpc() {
   /** 目录里别的东西变了（用户在应用外加了文件），重新扫一遍并收进来 */
   ipcMain.handle('mm:library:rescan', () => {
     const l = requireLib();
-    const adopted = l.adoptExisting();
+    const scanned = l.scanFolder();
     const synced = l.sync();
-    return { adopted: adopted.adopted, moved: synced.moved.length, dropped: synced.dropped };
+    return { adopted: scanned.adopted, moved: synced.moved.length, dropped: synced.dropped };
   });
 
   ipcMain.handle('mm:library:openRoot', () => openRoot());

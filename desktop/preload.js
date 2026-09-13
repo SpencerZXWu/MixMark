@@ -57,5 +57,13 @@ contextBridge.exposeInMainWorld('mixmark', {
   /** 库换地方了（重新选了文件夹），界面需要重新加载文档树 */
   onLibraryChanged: (cb) => {
     ipcRenderer.on('mm:library-changed', () => cb());
+  },
+
+  /**
+   * 自动扫描在文件夹里发现了新文档。
+   * 与「换了库」分开报：那个要重载文档树，这个只需要把新文档收进来。
+   */
+  onLibraryScanned: (cb) => {
+    ipcRenderer.on('mm:library-scanned', (_e, info) => cb(info || {}));
   }
 });

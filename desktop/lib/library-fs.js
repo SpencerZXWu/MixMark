@@ -363,23 +363,36 @@ function open(root) {
      首次连接：把文件夹里已有的 .md 收进来
      ------------------------------------------------------------------ */
 
-  /**
-   * 如果目录里已经有 .md（比如用户把旧笔记丢了进来），第一次连接时把它们收进库里。
-   * 只在索引为空时做，避免每次启动都重复导入。
-   */
-  function adoptExisting() {
-    const docs = docsIndex();
-    if (docs.length) return { adopted: 0 };
+  /* ------------------------------------------------------------------
+     扫文件夹：把磁盘上的 .md 收进索引
+     ------------------------------------------------------------------
+     同一套遍历与建文件夹逻辑，两个用法：
+       adoptExisting()  首次连接，索引还空着的时候全量收编
+       scanFolder()     每次都能用，只补磁盘上新出现的那些
+     ------------------------------------------------------------------ */
 
+  /**
+   * 遍历文件夹，收集所有 .md / .markdown / .txt。
+   *
+   * ok=false 表示**根目录没读成**（被删了、U 盘拔了、没权限）。
+   * 这个区分很要紧：调用方据此决定是「什么都别做」还是「里面本来就空」——
+   * 把「读不到」当成「里面没东西」，一次意外就能让整个库看起来空了。
+   */
+  function collectDocs() {
     const found = [];
+    let ok = false;
+
     (function walk(dir, prefix) {
       if (found.length >= MAX_ADOPT) return;
+
       let entries;
       try {
         entries = fs.readdirSync(dir, { withFileTypes: true });
       } catch (err) {
         return;
       }
+      ok = true;
+
       for (const e of entries) {
         if (e.isDirectory()) {
           if (e.name === META_DIR || SKIP_DIRS.has(e.name.toLowerCase())) continue;
@@ -396,6 +409,77 @@ function open(root) {
       }
     })(root, '');
 
+    return { found, ok };
+  }
+
+  function newId(prefix, stamp) {
+    return prefix + stamp.toString(36) + Math.random().toString(36).slice(2, 5);
+  }
+
+  /**
+   * 「相对目录路径」→ 虚拟文件夹 id，缺的补建。
+   *
+   * 按 (parentId, name) 认已有的文件夹 —— 增量扫描时必须这样，
+   * 否则用户每丢一次文件，磁盘上那棵目录树就会在侧栏里多长一遍。
+   */
+  function folderMaker(folders, stamp) {
+    const idOf = { '': null };
+
+    return function idFor(prefix) {
+      if (prefix in idOf) return idOf[prefix];
+
+      const parts = prefix.split('/');
+      const parentId = idFor(parts.slice(0, -1).join('/'));
+      const name = parts[parts.length - 1];
+
+      let hit = folders.find((f) => f.parentId === parentId && f.name === name);
+      if (!hit) {
+        hit = {
+          id: newId('f', stamp + folders.length),
+          name,
+          parentId,
+          ctime: stamp,
+          mtime: stamp
+        };
+        folders.push(hit);
+      }
+
+      idOf[prefix] = hit.id;
+      return hit.id;
+    };
+  }
+
+  /** 相对路径的目录部分 → 文件夹 id（根目录是 null） */
+  function folderOf(rel, idFor) {
+    const parts = rel.split('/');
+    if (parts.length < 2) return null;
+    return idFor(parts.slice(0, -1).join('/'));
+  }
+
+  /** 一个磁盘文件 → 一条索引记录 */
+  function docFrom(f, stamp, folderId) {
+    return {
+      id: newId('d', stamp),
+      // 标题不带后缀：文档树里其它文档都不带，混着显示很别扭。
+      // 磁盘文件名不受影响 —— files 里记的是收编时的相对路径
+      title: f.name.replace(/\.(md|markdown|txt)$/i, ''),
+      ctime: stamp,
+      mtime: stamp,
+      size: 0,
+      format: f.format,
+      autoTitle: false,
+      folderId: folderId
+    };
+  }
+
+  /**
+   * 首次连接：索引还空着，把文件夹里已有的文档全收进来。
+   * 只在索引为空时做 —— 之后往文件夹里加东西走 scanFolder()。
+   */
+  function adoptExisting() {
+    if (docsIndex().length) return { adopted: 0 };
+
+    const { found } = collectDocs();
     if (!found.length) return { adopted: 0 };
     if (found.length >= MAX_ADOPT) {
       console.warn('[library-fs] 这个文件夹里的文档太多了，只收编了前 ' + MAX_ADOPT + ' 篇');
@@ -403,37 +487,14 @@ function open(root) {
 
     const stamp = Date.now();
     const folders = [];
-    const docsOut = [];
+    const idFor = folderMaker(folders, stamp);
 
-    // 每层真实目录建一个虚拟文件夹
-    const dirIds = { '': null };
-    function folderIdFor(prefix) {
-      if (prefix in dirIds) return dirIds[prefix];
-      const parts = prefix.split('/');
-      const parentPrefix = parts.slice(0, -1).join('/');
-      const parentId = folderIdFor(parentPrefix);
-      const id = 'f' + (stamp + folders.length).toString(36) + Math.random().toString(36).slice(2, 5);
-      folders.push({ id, name: parts[parts.length - 1], parentId, ctime: stamp, mtime: stamp });
-      dirIds[prefix] = id;
-      return id;
-    }
-
-    found.forEach((f, i) => {
-      const prefix = f.rel.split('/').slice(0, -1).join('/');
-      const id = 'd' + (stamp + i).toString(36) + Math.random().toString(36).slice(2, 6);
-      docsOut.push({
-        id,
-        // 标题不带后缀：文档树里其它文档都不带，混着显示很别扭。
-        // 磁盘文件名不受影响 —— files 里记的是收编时的相对路径
-        title: f.name.replace(/\.(md|markdown|txt)$/i, ''),
-        ctime: stamp,
-        mtime: stamp - i,
-        size: 0,
-        format: f.format,
-        autoTitle: false,
-        folderId: prefix ? folderIdFor(prefix) : null
-      });
-      files[id] = f.rel;
+    const docsOut = found.map((f, i) => {
+      const doc = docFrom(f, stamp + i, folderOf(f.rel, idFor));
+      // 越靠前的越「新」：列表按 mtime 倒序，这样顺序跟文件夹里看到的接近
+      doc.mtime = stamp - i;
+      files[doc.id] = f.rel;
+      return doc;
     });
 
     writeJsonFile(foldersFile, folders);
@@ -441,6 +502,50 @@ function open(root) {
     saveFiles();
 
     return { adopted: docsOut.length };
+  }
+
+  /**
+   * 增量扫一遍：把**后来**丢进文件夹的文档收进来。
+   *
+   * 这就是「我往文件夹里放一篇，切回应用该能看见它」。与 adoptExisting 的区别是
+   * 每次都干活，而且只认磁盘上没有记录的那些。
+   *
+   * 只加不删：磁盘上少了什么不在这里处理 —— 一次读不到目录就当整库清空，
+   * 代价太大（见 collectDocs 的 ok）。
+   */
+  function scanFolder() {
+    const { found, ok } = collectDocs();
+    if (!ok) return { adopted: 0, files: [] };
+
+    const docs = docsIndex();
+    const folders = foldersIndex();
+
+    // 已有记录：相对路径（小写）→ 文档 id
+    const known = {};
+    for (const id of Object.keys(files)) {
+      if (files[id]) known[files[id].toLowerCase()] = id;
+    }
+
+    const idFor = folderMaker(folders, Date.now());
+    const stamp = Date.now();
+    const added = [];
+
+    found.forEach((f, i) => {
+      if (known[f.rel.toLowerCase()]) return; // 已经在库里了
+      const doc = docFrom(f, stamp + i, folderOf(f.rel, idFor));
+      doc.mtime = stamp - i;
+      docs.push(doc);
+      files[doc.id] = f.rel;
+      added.push(f.rel);
+    });
+
+    if (!added.length) return { adopted: 0, files: [] };
+
+    writeJsonFile(foldersFile, folders);
+    writeJsonFile(docsFile, docs);
+    saveFiles();
+
+    return { adopted: added.length, files: added };
   }
 
   return {
@@ -452,6 +557,7 @@ function open(root) {
     keys,
     sync,
     adoptExisting,
+    scanFolder,
     docsIndex,
     foldersIndex,
     /** 全部文档 → 绝对路径的映射（给页面做「存在哪」的展示） */

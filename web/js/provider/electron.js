@@ -169,6 +169,22 @@
   }
 
   /**
+   * 重新读一次主进程的库状态。
+   *
+   * 收编/扫描之后磁盘上会多出几篇文档 —— 那份「哪篇存在哪个文件」的映射
+   * 也变了，不重新读一次，状态栏与 AI 会说「不知道存在哪」。
+   */
+  function refresh() {
+    var b = api();
+    if (!b) return Promise.resolve(null);
+
+    return wrap(b.library.status()).then(function (st) {
+      if (st && st.connected) state = st;
+      return state;
+    });
+  }
+
+  /**
    * 让磁盘上的 .md 与索引对齐。
    * 结构操作（重命名 / 移动 / 新建文件夹）之后调一次 ——
    * 索引改了而文件没跟着走，两边会慢慢飘开，最后用户看到的是「名字对不上」。
@@ -216,6 +232,7 @@
     status: status,
     pickRoot: pickRoot,
     openPath: openPath,
+    refresh: refresh,
     forget: forget,
     sync: sync,
     pathOf: pathOf,

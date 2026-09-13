@@ -237,6 +237,47 @@ section('⑧ 元数据目录不会被当成文档，也不会被清掉');
   ok('files.json 记录了位置', JSON.parse(fs.readFileSync(path.join(root, '.mixmark', 'files.json'), 'utf8')).d1 === '甲.md');
 }
 
+section('⑨ 增量扫描：往文件夹里丢一篇，扫一次就该收进来');
+
+{
+  const root = freshRoot('scan');
+  const l = lib.open(root);
+
+  fs.writeFileSync(path.join(root, '甲.md'), '# 甲\n', 'utf8');
+  ok('首次连接收编 1 篇', l.adoptExisting().adopted === 1);
+
+  // 这就是用户干的事：在文件管理器里把文档丢进去
+  fs.writeFileSync(path.join(root, '乙.md'), '# 乙\n', 'utf8');
+  fs.mkdirSync(path.join(root, '课程'), { recursive: true });
+  fs.writeFileSync(path.join(root, '课程', '丙.md'), '# 丙\n', 'utf8');
+  fs.mkdirSync(path.join(root, 'node_modules'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'node_modules', 'README.md'), '# 不是笔记\n', 'utf8');
+
+  const r = l.scanFolder();
+  ok('扫出新丢进来的 2 篇', r.adopted === 2, JSON.stringify(r.files));
+
+  const docs = l.docsIndex();
+  const folders = l.foldersIndex();
+  ok('索引里有 3 篇', docs.length === 3, docs.map((d) => d.title).join(','));
+  ok('子目录建出了文件夹', folders.length === 1 && folders[0].name === '课程', JSON.stringify(folders));
+  ok('新收的挂到了文件夹下', docs.find((d) => d.title === '丙').folderId === folders[0].id);
+  ok('node_modules 照旧跳过', !docs.some((d) => d.title === 'README'));
+  ok('新收的内容读得回来', l.get('doc:' + docs.find((d) => d.title === '乙').id) === '# 乙\n');
+
+  // 重复扫：不能重复收，也不能每次多长一棵文件夹树
+  ok('再扫一次不重复', l.scanFolder().adopted === 0);
+  ok('文件夹没有重复建', l.foldersIndex().length === 1);
+
+  // 根目录整个读不到（被删了/U 盘拔了）：不能当成「里面本来就空」
+  const gone = freshRoot('gone');
+  const g = lib.open(gone);
+  fs.writeFileSync(path.join(gone, '甲.md'), '# 甲\n', 'utf8');
+  g.adoptExisting();
+  fs.rmSync(gone, { recursive: true, force: true });
+  const r2 = g.scanFolder();
+  ok('根目录读不到时不误判为空', r2.adopted === 0 && r2.files.length === 0, JSON.stringify(r2));
+}
+
 /* ------------------------------------------------------------------ */
 
 console.log('\n通过 ' + pass + ' 项，失败 ' + fail + ' 项');
